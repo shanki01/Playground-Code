@@ -1,5 +1,5 @@
 import bluetooth
-import ble_CBR_short
+import ble_SMH
 import time
 
 class peripheral:
