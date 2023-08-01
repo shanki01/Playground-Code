@@ -1,7 +1,4 @@
-import bluetooth
-import time
 import ble_SMH
-from ble_advertising import decode_services, decode_name
 
 class central:
       
@@ -9,13 +6,14 @@ class central:
         ble_SMH.BLESimpleCentral._reset
         self.hub = ble_SMH.BLESimpleCentral(target)
         self.per_name = None
-        self.connect()
         
-    def cen_scan(self, duration):         
+    def scan(self, duration):         
         self.hub.scan(duration)
+        self.hub.wait_for_scan()
+        self.per_name = self.hub.peripheral
      
     def connect(self):
-        self.cen_scan(0)
+        self.scan(0)
         self.hub.wait_for_scan()
         self.hub.connect()
         print("Connected")
@@ -65,7 +63,6 @@ class peripheral:
         ble = bluetooth.BLE()
         
         self.hub = ble_SMH.BLESimplePeripheral(ble, 'UART', name)
-        self.advertise()
         
         def on_rx(v):
             print("RX", str(bytes(v)))
@@ -113,3 +110,4 @@ class peripheral:
         
     def is_connected(self):
         return self.hub.is_connected()
+
