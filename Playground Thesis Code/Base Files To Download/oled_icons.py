@@ -367,4 +367,3 @@ def draw_crab():
         oled.pixel(*pixel, 1)  # Unpacking tuple directly
 
     oled.show()  # Show the drawn shapes on the OLED
-draw_tree()
