@@ -206,7 +206,7 @@ class Networking:
                         self._peers[peer_mac]['channel'] = channel
                     if ifidx  !=  None:
                         self._peers[peer_mac]['ifidx'] = ifidx
-                    self.master._iprint(f"Peer {peer_mac} updated to channel {channel}, ifidx {ifidx} and name {name}")
+                    #self.master._iprint(f"Peer {peer_mac} updated to channel {channel}, ifidx {ifidx} and name {name}")
                 except OSError as e:
                     print(f"Error updating peer {peer_mac}: {e}")
                 return
@@ -255,7 +255,7 @@ class Networking:
             else:
                 channel = self.master.sta.channel()#make sure to account for sta send and ap send
             self._compose(mac, [channel,self.ifidx,self.master.name], 0x01, 0x10) #sends channel, ifidx and name
-            self.master._iprint(f"Sent ping to {mac} ({self.peer_name(mac)})")
+            #self.master._iprint(f"Sent ping to {mac} ({self.peer_name(mac)})")
             gc.collect()
         
         def echo(self, mac, message):
@@ -592,7 +592,7 @@ class Networking:
             def __handle_cmd(sender_mac, subtype, stimestamp, rtimestamp, payload_type, payload):
                 self.master._dprint("aen.__handle_cmd")
                 if subtype == b'\x10': #Ping
-                    self.master._iprint(f"Ping command received from {sender_mac} ({self.peer_name(sender_mac)})")
+                    #self.master._iprint(f"Ping command received from {sender_mac} ({self.peer_name(sender_mac)})")
                     info = __decode_payload(payload_type, payload)
                     self.add_peer(sender_mac, info[2], info[0], info[1])
                     if bool(self.ifidx):
