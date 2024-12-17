@@ -1,7 +1,9 @@
+import bluetooth
 import time
 import struct
-from variableLED import VariableLED
 from networking import Networking
+import sensors
+from variableLED import VariableLED
 from machine import Pin, SoftI2C, PWM, ADC
 
 #variable LED
@@ -9,7 +11,7 @@ pin_clk = Pin(7, Pin.OUT)
 pin_data = Pin(6, Pin.OUT)
 num_leds = 1
 color = VariableLED(pin_clk, pin_data, num_leds)
-color[0] = (0,0,255)
+color[0] = (255,0,0)  #Change color for each board
 color.write()
 
 def send(pin):
@@ -23,7 +25,7 @@ def send(pin):
         rssi_buffer.append(abs(networking.aen.rssi()[key][0]))
         key_buffer.append(key)
     closest_mac = key_buffer[rssi_buffer.index(min(rssi_buffer))]
-    networking.aen.send(closest_mac, '3')
+    networking.aen.send(closest_mac, '1')  #Change number for each board
 
 networking = Networking(True, False) #First bool is for network info messages, second for network debug messages
 broadcast_mac = b'\xff\xff\xff\xff\xff\xff'

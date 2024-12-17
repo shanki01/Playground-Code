@@ -32,11 +32,13 @@ def receive():
                     switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
                     module.clear_display()
                     module.sequence = []
+                    num = None
+                    last_num = None
                     break
                 time.sleep(0.05)
             module.screen_display(None)
             
-        elif isinstance(message, list): #received a sequence
+        elif message == 'player':
             switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
             module.board_mac = mac
             module.screen_display('Accept Player?')
@@ -45,13 +47,16 @@ def receive():
                 if switch_select.value() == 0:
                     module.status = 'player'
                     module.send(module.board_mac, 'player')
-                    time.sleep(1)
+                    time.sleep(0.5)
                     module.clear_display()
                     module.player_sequence = []
-                    module.display_sequence(message)
+                    num = None
                     break
                 time.sleep(0.05)
             module.screen_display(None)
+            
+        elif isinstance(message, list):  #Received a sequence
+            module.display_sequence(message)
             
         else: #received a number
             num = int(message)
@@ -82,7 +87,7 @@ while True:
             module.add_to_sequence(num)
             module.count += 1
             last_num = num
-    elif module.status != 'searching':
+    elif module.status == 'player' and len(module.sequence) > 0:
         if not checked and num != None:
             matches = module.check_buffer(num)
             checked = True
