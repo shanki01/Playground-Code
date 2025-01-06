@@ -7,6 +7,7 @@ import os
 from playertracker import PlayerTracker
 from gamestate import GameState
 from max7219 import Max7219
+import time
 
 # --- Pin Constants for XIAO ESP32-C3 ---
 CODER_BUTTON_PIN = 0          # D0

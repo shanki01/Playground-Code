@@ -7,15 +7,15 @@ import ledmatrix
 import ssd1306
 import sensors
 from module import Module
-from machine import Pin, SoftI2C, PWM, ADC
+from machine import Pin, SoftI2C, PWM, ADC, Timer
 
-module = Module()
+module = Module('Lion')
 num = None
 last_num = None
 checked = False
 
 def receive():
-    global num, checked
+    global num, last_num, checked
     for mac, message, rtime in module.networking.aen.return_messages():
         module.received_message = message
         
@@ -26,17 +26,23 @@ def receive():
             start_time = time.time()
             while time.time() - start_time < 5:  # Keep active for 3 seconds
                 if switch_select.value() == 0:
+                    module.screen_display(None)
                     module.status = 'coder'
+                    print('Coder Accepted')
+                    module.screen_display('Coder')
                     module.send(module.board_mac, 'coder')
                     time.sleep(0.5)
-                    switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
                     module.clear_display()
                     module.sequence = []
                     num = None
                     last_num = None
+                    module.count = 0
                     break
                 time.sleep(0.05)
-            module.screen_display(None)
+            if module.screen_message != 'Coder':
+                module.screen_display(None)
+            if module.status == 'coder':
+                switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
             
         elif message == 'player':
             switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
@@ -45,7 +51,10 @@ def receive():
             start_time = time.time()
             while time.time() - start_time < 5:  # Keep active for 3 seconds
                 if switch_select.value() == 0:
+                    module.screen_display(None)
                     module.status = 'player'
+                    print('Player Accepted')
+                    module.screen_display('Player')
                     module.send(module.board_mac, 'player')
                     time.sleep(0.5)
                     module.clear_display()
@@ -53,7 +62,10 @@ def receive():
                     num = None
                     break
                 time.sleep(0.05)
-            module.screen_display(None)
+            if module.screen_message != 'Player':
+                module.screen_display(None)
+            if module.status == 'coder':
+                switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
             
         elif isinstance(message, list):  #Received a sequence
             module.display_sequence(message)
@@ -61,6 +73,8 @@ def receive():
         else: #received a number
             num = int(message)
             checked = False
+            
+        
             
 def select(pin):
     global num, last_num
@@ -80,6 +94,8 @@ def select(pin):
 #Callbacks
 switch_select = Pin(9, Pin.IN, Pin.PULL_UP)
 module.networking.aen.irq(receive)
+batt = Timer(2)
+batt.init(period=3000, mode=Timer.PERIODIC, callback=module.displaybatt)
 
 while True:
     if module.status == 'coder' and module.count < 8:
@@ -95,8 +111,3 @@ while True:
                 module.send(module.board_mac, module.player_sequence)
 
     time.sleep(2)
-                
-            
-            
-            
-            

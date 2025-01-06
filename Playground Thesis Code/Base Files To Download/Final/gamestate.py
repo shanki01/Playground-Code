@@ -1,3 +1,4 @@
+import time
 class GameState:
     def __init__(self, coder_mac=None, sequence=None):
         """
@@ -12,11 +13,11 @@ class GameState:
 
     def set_sequence(self, sequence):
         """Set the game sequence provided by the coder."""
-        if len(sequence) == 8 and all(1 <= num <= 10 for num in sequence):
+        if all(1 <= num <= 10 for num in sequence):
             self.sequence = sequence
             print(f"Game sequence set to: {self.sequence}")
         else:
-            raise ValueError("Sequence must be a list of 8 numbers between 1 and 10.")
+            raise ValueError("Sequence must be a list of numbers between 1 and 10.")
 
     def add_player(self, mac_address):
         """Add a player with the given MAC address."""

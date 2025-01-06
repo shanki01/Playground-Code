@@ -5,6 +5,7 @@ from led_sequence import LEDSequencer
 import ledmatrix
 import ssd1306
 import sensors
+import icons
 from machine import Pin, SoftI2C, PWM, ADC
 
 #Define module class
@@ -18,6 +19,7 @@ class Module:
         self.screen_message = None
         self.received_message = None
         self.motor = Pin(2, Pin.OUT)
+        self.sens = sensors.SENSORS()
         
         #Color dictionary
         self.c = {
@@ -35,12 +37,13 @@ class Module:
         self.networking = Networking(True, False) #First bool is for network info messages, second for network debug messages
         self.broadcast_mac = b'\xff\xff\xff\xff\xff\xff'
         self.networking.aen.add_peer(self.broadcast_mac, "All")
+        self.networking.aen.ping(self.broadcast_mac)
         self.networking.name = name
         
         #oled screen
         self.i2c = SoftI2C(scl = Pin(7), sda = Pin(6))
-        self.oled = ssd1306.SSD1306_I2C(128, 64, self.i2c)
-        self.oled.fill(0)
+        self.oled = icons.SSD1306_SMART(128, 64, self.i2c)
+        self.clear_oled()
 
         #Led Matrix setup
         self.matrix = ledmatrix.LEDMATRIX(self.i2c)
@@ -50,6 +53,15 @@ class Module:
         
     def clear_display(self):
         self.sequencer.clear_display()
+        
+    def clear_oled(self):
+        self.oled.fill(0)
+        self.oled.show()
+        
+    def displaybatt(self, p):
+        batterycharge=self.sens.readbattery()
+        self.oled.showbattery(batterycharge)
+        return batterycharge
         
     def vibrate(self, delay = 0.2):
         self.motor.value(1)
@@ -64,7 +76,7 @@ class Module:
         if message == None:
             self.oled.fill(0)
         else:
-            self.oled.text(message,0,0)
+            self.oled.text(message,0,20)
         self.oled.show()
     
     def display_sequence(self,sequence):

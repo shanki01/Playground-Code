@@ -6,6 +6,7 @@ import ujson as json
 import os
 from playertracker import PlayerTracker
 from gamestate import GameState
+import time
 
 
 # --- Constants ---
@@ -32,6 +33,7 @@ coder_button = Pin(9, Pin.IN, Pin.PULL_UP)
 player_button = Pin(10, Pin.IN, Pin.PULL_UP)
 
 # --- Timer for Inactivity Tracking ---
+'''
 last_activity = {}
 
 def reset_activity(mac_address):
@@ -46,6 +48,7 @@ def check_timeouts(timer):
 # Start a timer to check for timeouts every 30 seconds
 timeout_timer = Timer(0)
 timeout_timer.init(period=30000, mode=Timer.PERIODIC, callback=check_timeouts)
+'''
 
 # --- Save and Load Game State ---
 def save_game_state(filename):
@@ -112,12 +115,12 @@ def on_receive_callback():
         if msg == 'coder':
             game_state.coder_mac = mac
             print(f"Coder confirmed: {mac}")
-            reset_activity(mac)
+            #reset_activity(mac)
 
         # Handle player confirmation
         elif msg == 'player':
             game_state.add_player(mac)
-            reset_activity(mac)
+            #reset_activity(mac)
             if len(game_state.sequence) > 0:
                 networking.aen.send(mac, game_state.sequence) #if coder sequence is already "dumped", player "picks it up"
             print(f"Player confirmed: {mac}")
@@ -144,7 +147,7 @@ def on_receive_callback():
                     game_state.update_progress(mac, step)
                     player_index = list(game_state.players.keys()).index(mac)
                     #player_tracker.update_player_progress(player_index, step, game_state.sequence)
-                    reset_activity(mac)
+                    #reset_activity(mac)
                     print(f"Player {player_index} updated to step {step}")
 
 networking.aen.irq(on_receive_callback)

@@ -22,10 +22,9 @@ def send(pin):
     time.sleep(0.1)
     print(networking.aen.rssi())
     for key in networking.aen.rssi():
-        rssi_buffer.append(abs(networking.aen.rssi()[key][0]))
-        key_buffer.append(key)
-    closest_mac = key_buffer[rssi_buffer.index(min(rssi_buffer))]
-    networking.aen.send(closest_mac, '1')  #Change number for each board
+        rssi = networking.aen.rssi()[key][0]
+        if rssi > -25:
+            networking.aen.send(key, '1')
 
 networking = Networking(True, False) #First bool is for network info messages, second for network debug messages
 broadcast_mac = b'\xff\xff\xff\xff\xff\xff'
