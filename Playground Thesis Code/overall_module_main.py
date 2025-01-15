@@ -19,71 +19,82 @@ def receive():
     for mac, message, rtime in module.networking.aen.return_messages():
         module.received_message = message
         
-        if message == 'coder':
+        if message == 'Coder':
             switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
             module.board_mac = mac
+            module.screen_display(None)
             module.screen_display('Accept Coder?')
             start_time = time.time()
             while time.time() - start_time < 5:  # Keep active for 3 seconds
                 if switch_select.value() == 0:
                     module.screen_display(None)
-                    module.status = 'coder'
+                    module.status = 'Coder'
                     print('Coder Accepted')
-                    module.screen_display('Coder')
-                    module.send(module.board_mac, 'coder')
-                    time.sleep(0.5)
-                    module.clear_display()
+                    module.send(module.board_mac, 'Coder')
                     module.sequence = []
                     num = None
                     last_num = None
                     module.count = 0
                     break
                 time.sleep(0.05)
-            if module.screen_message != 'Coder':
-                module.screen_display(None)
-            if module.status == 'coder':
+            module.screen_display(None)
+            if module.status == 'Coder':
                 switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
             
-        elif message == 'player':
+        elif message == 'Player':
             switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
             module.board_mac = mac
+            module.screen_display(None)
             module.screen_display('Accept Player?')
             start_time = time.time()
-            while time.time() - start_time < 5:  # Keep active for 3 seconds
+            while time.time() - start_time < 5:  # Keep active for 5 seconds
                 if switch_select.value() == 0:
                     module.screen_display(None)
-                    module.status = 'player'
+                    module.status = 'Player'
                     print('Player Accepted')
-                    module.screen_display('Player')
-                    module.send(module.board_mac, 'player')
+                    module.send(module.board_mac, 'Player')
                     time.sleep(0.5)
-                    module.clear_display()
                     module.player_sequence = []
                     num = None
                     break
                 time.sleep(0.05)
-            if module.screen_message != 'Player':
-                module.screen_display(None)
-            if module.status == 'coder':
+            module.screen_display(None)
+            if module.status == 'Coder':
                 switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
             
         elif isinstance(message, list):  #Received a sequence
             module.display_sequence(message)
             
-        else: #received a number
-            num = int(message)
-            checked = False
-            
-        
+        else:   #received a number
+            if module.board_name() == 'Music':
+                module.screen_display(None)
+                module.screen_display('Add Note?')
+                switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
+                start_time = time.time()
+                while time.time() - start_time < 3:  # Keep active for 3 seconds
+                    if switch_select.value() == 0:
+                        module.screen_display(None)
+                        module.vibrate()
+                        print('Note Added')
+                        num = int(message)
+                        checked = False
+                        break
+                module.screen_display(None)
+                if module.status == 'Coder':
+                    switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
+            else:
+                num = int(message)
+                checked = False
             
 def select(pin):
-    global num, last_num
-    if module.status == 'coder':
-        module.networking.aen.ping(module.board_mac)
-        rssi = module.networking.aen.rssi()[module.board_mac][0]
-        print(rssi)
-        if rssi > -25:
+    global num, last_num, sent
+    if module.status == 'Coder':
+        if module.board_rssi > -25:
             module.send(module.board_mac, module.sequence)
+            module.screen_display(None)
+            module.screen_display('Sent')
+            time.sleep(2)
+            module.screen_display(None)
         #if within trash range:
             #module.reset()
             #num = None
@@ -95,15 +106,29 @@ def select(pin):
 switch_select = Pin(9, Pin.IN, Pin.PULL_UP)
 module.networking.aen.irq(receive)
 batt = Timer(2)
-batt.init(period=3000, mode=Timer.PERIODIC, callback=module.displaybatt)
+batt.init(period=1000, mode=Timer.PERIODIC, callback=module.displaybatt)
+status = Timer(0)
+status.init(period=3000, mode=Timer.PERIODIC, callback=module.checkstatus)
 
 while True:
-    if module.status == 'coder' and module.count < 8:
-        if num != last_num and num != None:
-            module.add_to_sequence(num)
-            module.count += 1
-            last_num = num
-    elif module.status == 'player' and len(module.sequence) > 0:
+    if module.status == 'Coder':
+        if module.count < 8:
+            if num != None:
+                if module.board_name() == 'Music' or num != last_num:
+                    module.add_to_sequence(num)
+                    module.count += 1
+                    last_num = num
+        if module.count > 0:
+            while module.board_rssi > -25:
+                if module.screen_message != 'Send?':
+                    in_range = True
+                    module.screen_display(None)
+                    module.screen_display('Send?')
+            if in_range:
+                module.screen_display(None)
+                in_range = False
+            
+    elif module.status == 'Player' and len(module.sequence) > 0:
         if not checked and num != None:
             matches = module.check_buffer(num)
             checked = True

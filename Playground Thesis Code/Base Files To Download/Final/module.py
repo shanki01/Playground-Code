@@ -11,8 +11,10 @@ from machine import Pin, SoftI2C, PWM, ADC
 #Define module class
 class Module:
     def __init__(self, name = 'Lion'): #change to module animal
-        self.status = 'searching'
+        self.status = 'Searching'
+        self.last_status = None
         self.board_mac = None
+        self.board_rssi = None
         self.count = 0
         self.sequence = []
         self.player_sequence = []
@@ -62,6 +64,16 @@ class Module:
         batterycharge=self.sens.readbattery()
         self.oled.showbattery(batterycharge)
         return batterycharge
+    
+    def checkstatus(self,p):
+        if self.screen_message == None and self.status != self.last_status:
+            self.screen_display(self.status)
+        if self.board_mac != None:
+            self.networking.aen.ping(self.board_mac)
+            self.board_rssi = self.networking.aen.rssi()[self.board_mac][0]
+            
+    def board_name(self):
+        return self.networking.aen.peer_name(self.board_mac)
         
     def vibrate(self, delay = 0.2):
         self.motor.value(1)
@@ -74,9 +86,9 @@ class Module:
     def screen_display(self, message):
         self.screen_message = message
         if message == None:
-            self.oled.fill(0)
+            self.oled.fill_rect(0,20,128,40,0)
         else:
-            self.oled.text(message,0,20)
+            self.oled.text(message,0,20,1)
         self.oled.show()
     
     def display_sequence(self,sequence):
