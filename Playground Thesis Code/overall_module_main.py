@@ -9,10 +9,11 @@ import sensors
 from module import Module
 from machine import Pin, SoftI2C, PWM, ADC, Timer
 
-module = Module('Lion')
+module = Module('Elephant')
 num = None
 last_num = None
 checked = False
+in_range = False
 
 def receive():
     global num, last_num, checked
@@ -66,7 +67,7 @@ def receive():
             module.display_sequence(message)
             
         else:   #received a number
-            if module.board_name() == 'Music':
+            if module.board_name() == 'Music' and module.status == 'Coder':
                 module.screen_display(None)
                 module.screen_display('Add Note?')
                 switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
@@ -89,7 +90,7 @@ def receive():
 def select(pin):
     global num, last_num, sent
     if module.status == 'Coder':
-        if module.board_rssi > -25:
+        if module.board_rssi > -40:
             module.send(module.board_mac, module.sequence)
             module.screen_display(None)
             module.screen_display('Sent')
@@ -119,7 +120,7 @@ while True:
                     module.count += 1
                     last_num = num
         if module.count > 0:
-            while module.board_rssi > -25:
+            while module.board_rssi > -40:
                 if module.screen_message != 'Send?':
                     in_range = True
                     module.screen_display(None)
