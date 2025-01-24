@@ -14,8 +14,10 @@ color = VariableLED(pin_clk, pin_data, num_leds)
 color[0] = (255,0,0)  #Change color for each board
 color.write()
 
+modules = ['Lion', 'Tiger', 'Elephant', 'Giraffe', 'Duck', 'Frog', 'Dog', 'Leopard', 'Zebra','Monkey']
+
 def send(pin):
-    global broadcast_mac
+    global broadcast_mac, modules
     rssi_buffer = []
     key_buffer = []
     networking.aen.ping(broadcast_mac)
@@ -23,7 +25,7 @@ def send(pin):
     print(networking.aen.rssi())
     for key in networking.aen.rssi():
         rssi = networking.aen.rssi()[key][0]
-        if rssi > -25:
+        if networking.aen.peer_name(key) in modules and rssi > -40:
             networking.aen.send(key, '1')
 
 networking = Networking(True, False) #First bool is for network info messages, second for network debug messages

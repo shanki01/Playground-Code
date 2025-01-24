@@ -87,13 +87,13 @@ def add_coder_handler(pin):
     """Handler to initiate adding a coder."""
     print("Requesting coder...")
     #player_tracker.indicate_request(0, color=(0, 0, 255))  # Blue light for coder request
-    send_to_close_modules('coder', -40)
+    send_to_close_modules('coder', -50)
 
 def add_player_handler(pin):
     """Handler to initiate adding a specific player."""
     print(f"Requesting player...")
     #player_tracker.indicate_request(player_number, color=(0, 255, 0))  # Green light for player request
-    send_to_close_modules('player', -40)
+    send_to_close_modules('player', -50)
 
 def undo_handler(pin):
     """Handler to recover the previous game state."""

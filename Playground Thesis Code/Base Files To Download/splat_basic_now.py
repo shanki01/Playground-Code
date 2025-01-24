@@ -1,7 +1,7 @@
 import time
 import struct
 import math
-from networking import Networking
+from now import Now
 from machine import Pin, SoftI2C, PWM, ADC, I2S
 import neopixel
 import machine
@@ -15,17 +15,17 @@ class Splat:
         #Color dictionary
         self.c = {
         1:(255,0,0), #red
-        2:(255,127,0), #orange
+        2:(255,100,0), #orange
         3:(255,255,0), #yellow
         4:(0,255,0), #green
         5:(0,255,255), #cyan
         6:(0,0,255), #blue
         7:(100,0,190), #purple
-        8:(255,70,200), #pink
+        8:(255,192,203), #pink
         }
         
         #Note dictionary
-        self.n = {
+        self.note = {
         1:"notet1.wav",
         2:"notet2.wav",
         3:"notet3.wav",
@@ -52,15 +52,11 @@ class Splat:
         self.pwmV.freq(1000)
         self.pwmV.duty(1000)
         
-        #self.calib_vals = self.calibrate()
-        self.is_pressed = False
+        self.calib_vals = self.calibrate()
         
         #Initialize ESPNOW
-        self.networking = Networking(True, False) #First bool is for network info messages, second for network debug messages
-        self.networking.ap._ap.active(False)
-        self.broadcast_mac = b'\xff\xff\xff\xff\xff\xff'
-        self.networking.aen.add_peer(self.broadcast_mac, "All")
-        self.networking.name = name
+        self.n = Now()
+        self.n.connect()
         
         self.modules = ['Lion', 'Tiger', 'Elephant', 'Giraffe', 'Duck', 'Frog', 'Dog', 'Leopard', 'Zebra','Monkey']
     
@@ -69,6 +65,12 @@ class Splat:
 
     def read_buttons(self):
         return self.sw1.value() | self.sw2.value()<<1 | self.sw3.value()<<2 | self.sw4.value()<<3
+
+    def is_pressed(self):
+        if self.calib_vals ^ self.read_buttons():
+            return True
+        else:
+            return False
 
     # Function to set all LEDs to a specific color
     def set_color(self, d = None):
@@ -106,19 +108,17 @@ class Splat:
             time.sleep(0.05)
             
     def send_to_close_modules(self):
-        rssi_buffer = []
-        key_buffer = []
-        self.networking.aen.ping(self.broadcast_mac)
+        self.n.publish('splat')
         time.sleep(0.1)
-        for key in self.networking.aen.rssi():
-            rssi = self.networking.aen.rssi()[key][0]
-            print(rssi)
-            print(self.networking.aen.peer_name(key))
-            if self.networking.aen.peer_name(key) in self.modules and rssi > -100:
-                self.networking.aen.send(key, self.name)
+        print(self.n.rssi_table)
+        for key in self.n.rssi_table:
+            rssi = self.n.rssi_table[key][0]
+            if rssi > -40:
+                print(rssi)
+                self.n.publish(self.name, key)
         
     def play_sound(self):
-        path = self.n[int(self.name)]
+        path = self.note[int(self.name)]
         # Open the .wav file from the SD card
         with open(path, "rb") as wav_file:
             sample_rate, bit_depth = self.parse_wav_header(wav_file)
