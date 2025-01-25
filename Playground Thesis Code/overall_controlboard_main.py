@@ -41,6 +41,9 @@ player_tracker = PlayerTracker(pin=NEOPIXEL_PIN)
 spi = SPI(1, baudrate=10000000, sck=Pin(SPI_SCK_PIN), mosi=Pin(SPI_MOSI_PIN))
 cs = Pin(MAX7219_CS_PIN, Pin.OUT)
 max_display = Max7219(64, 8, spi, cs)  # 8 matrices (64 pixels wide, 8 pixels high)
+max_display.text("READY GO",0,0,1)
+max_display.show()
+
 
 # --- Button Setup ---
 coder_button = Pin(CODER_BUTTON_PIN, Pin.IN, Pin.PULL_UP)
@@ -81,26 +84,58 @@ def send_to_close_modules(message, cutoff):
             networking.aen.send(key, message)
 
 # --- Button Handlers ---
+def button_detect_long_press(pin, duration=200):
+    start = time.ticks_ms()
+    while time.ticks_ms()-start<duration:
+        time.sleep(duration/10000)
+        # print(time.ticks_ms()-start<duration,":",pin.value())
+        if pin.value():
+           return False
+    while not pin.value(): #wait for release
+        print("held")
+        time.sleep(duration/100000)
+    time.sleep(duration/2000)
+    return True
+    
 def add_coder_handler(pin):
     """Handler to initiate adding a coder."""
     print("Requesting coder...")
-    player_tracker.indicate_request(0, color=(0, 0, 255))  # Blue light for coder request
-    send_to_close_modules('coder', -100)
+    if button_detect_long_press(pin):
+        game_state.reset_game()
+        max_display.draw_5x3_string("NEW GAME!")
+        max_display.show()
+        player_tracker.clear_all()
+        player_tracker.indicate_request(4, color=(0, 0, 255))  # Blue light for coder request
+        send_to_close_modules('Coder', -60)
+    else:
+        print("Code Button Released Early")
+        
 
-def add_player_handler(pin, num):
+def add_player_handler(pin, player_number):
     """Handler to initiate adding a specific player."""
     print(f"Requesting player...")
-    player_tracker.indicate_request(player_number, color=(0, 255, 0))  # Green light for player request
-    send_to_close_modules('player', -100)
+    if button_detect_long_press(pin):
+        player_tracker.indicate_request(player_number-1, color=(255, 0, 0))  # Green light for player request
+        send_to_close_modules('Player', -60)
+    else:
+        print("Player Button Released Early")
 
 def undo_handler(pin):
     """Handler to recover the previous game state."""
-    print("Undoing last reset...")
-    backup_and_load_previous_game()
+    if button_detect_long_press(pin):
+        print("Undoing last reset...")
+        backup_and_load_previous_game()
+
+def shuffle_handler(pin):
+    """Handler to recover the previous game state."""
+    if button_detect_long_press(pin):
+        print("Undoing last reset...")
+        backup_and_load_previous_game()
 
 # Assign button handlers
 coder_button.irq(trigger=Pin.IRQ_FALLING, handler=add_coder_handler)
 undo_button.irq(trigger=Pin.IRQ_FALLING, handler=undo_handler)
+
 def create_handler(num):
     # Returns a handler function specific to the player number
     def handler(pin):
@@ -114,16 +149,23 @@ for i, button in enumerate(player_buttons):
 # --- ESP-NOW Receive Handler ---
 def on_receive_callback():
     for mac, msg, rtime in networking.aen.return_messages():
+        print('received',msg,type(msg))
         # Handle coder confirmation
-        if msg == 'coder':
+        if msg == 'Coder':
             game_state.coder_mac = mac
             print(f"Coder confirmed: {mac}")
+            max_display.draw_5x3_string("CODING")
+            max_display.show()
+            player_tracker.indicate_request(4, (0,0,0))
+           
 
         # Handle player confirmation
-        elif msg == 'player':
+        elif msg == 'Player':
             game_state.add_player(mac)
             if len(game_state.sequence) > 0:
                 networking.aen.send(mac, game_state.sequence) #if coder sequence is already "dumped", player "picks it up"
+            player_index = list(game_state.players.keys()).index(mac)
+            player_tracker.indicate_request(player_index, (0,0,0))
             print(f"Player confirmed: {mac}")
 
         # Handle sequence broadcast
@@ -140,6 +182,9 @@ def on_receive_callback():
                 player_tracker.reset_all_progress()
                 game_state.set_sequence(sequence)
                 player_tracker.display_coder_sequence(sequence)
+                max_display.draw_5x3_list(sequence)
+                max_display.show()
+                    
                 print(f"Sequence received: {sequence}")
             # Handle player progress update    
             else:
