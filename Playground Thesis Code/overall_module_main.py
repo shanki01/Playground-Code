@@ -22,20 +22,16 @@ def receive():
         
         if message == 'Coder':
             switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
-            module.board_mac = mac
             module.screen_display(None)
             module.screen_display('Accept Coder?')
             start_time = time.time()
             while time.time() - start_time < 5:  # Keep active for 3 seconds
                 if switch_select.value() == 0:
-                    module.screen_display(None)
-                    module.status = 'Coder'
+                    module.switch_status('Coder',mac)
                     print('Coder Accepted')
-                    module.send(module.board_mac, 'Coder')
-                    module.sequence = []
                     num = None
                     last_num = None
-                    module.count = 0
+                    time.sleep(0.05)
                     break
                 time.sleep(0.05)
             module.screen_display(None)
@@ -44,18 +40,14 @@ def receive():
             
         elif message == 'Player':
             switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
-            module.board_mac = mac
             module.screen_display(None)
             module.screen_display('Accept Player?')
             start_time = time.time()
             while time.time() - start_time < 5:  # Keep active for 5 seconds
                 if switch_select.value() == 0:
-                    module.screen_display(None)
-                    module.status = 'Player'
+                    module.switch_status('Coder',mac)
                     print('Player Accepted')
-                    module.send(module.board_mac, 'Player')
                     time.sleep(0.5)
-                    module.player_sequence = []
                     num = None
                     break
                 time.sleep(0.05)

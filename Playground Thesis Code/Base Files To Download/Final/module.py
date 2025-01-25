@@ -20,6 +20,8 @@ class Module:
         self.player_sequence = []
         self.screen_message = None
         self.received_message = None
+        self.last_message = None
+        self.complete = False
         self.motor = Pin(2, Pin.OUT)
         self.sens = sensors.SENSORS()
         
@@ -115,6 +117,7 @@ class Module:
     def display_correct(self):
         buffer = [0x52]*64
         self.matrix.display_frames(buffer, 1000,1,1)
+        self.complete = True
         
     def add_to_sequence(self,num):
         self.sequence.append(num)
@@ -139,11 +142,15 @@ class Module:
             self.display_wrong()
             self.display_player_sequence()
             return False
-        
-    def reset(self):
-        self.status = 'searching'
-        self.board_mac = None
-        self.count = 0
-        self.sequence = []
-        self.player_sequence = []
+    
+    def switch_status(self, status, mac):
+        self.status = status
+        self.board_mac = mac
+        self.screen_display(None)
         self.clear_display()
+        if status == 'Coder':
+            self.sequence = []
+            self.count = 0
+        elif status == 'Player':
+            self.player_sequence = []
+        self.send(self.board_mac, status)
