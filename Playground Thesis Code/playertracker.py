@@ -15,7 +15,7 @@ colors = {
         
 
 class PlayerTracker:
-    def __init__(self, pin, num_rows=5, row_length=8, init_skip=1, row_skip=4, buttons=5):
+    def __init__(self, pin, num_rows=5, row_length=8, init_skip=1, row_skip=4,  ):
         """
         Initialize the NeoPixel player tracker.
 
