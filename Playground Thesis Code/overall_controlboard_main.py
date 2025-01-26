@@ -51,26 +51,82 @@ undo_button = Pin(UNDO_BUTTON_PIN, Pin.IN, Pin.PULL_UP)
 random_button = Pin(RANDOM_BUTTON_PIN, Pin.IN, Pin.PULL_UP)
 player_buttons = [Pin(pin, Pin.IN, Pin.PULL_UP) for pin in PLAYER_BUTTON_PINS]
 
+# --- Manage Active Invitations
+
+# Global variables
+current_invitation = None
+invitation_timer = Timer(1)
+
+class Invitation:
+    def __init__(self, invite_type, position=None):
+        """
+        Create an invitation with a specific type.
+        
+        Args:
+            invite_type: String "Coder" or "Player"
+            position: Position number for player invitations (1-4)
+        """
+        self.type = invite_type
+        self.position = position
+
+def clear_invitation_and_display(timer):
+    """
+    Timer callback to clear invitation and update display.
+    
+    Args:
+        timer: Timer instance (unused but required for callback)
+    """
+    global current_invitation
+    if current_invitation:
+        if current_invitation.type == "Coder":
+            player_tracker.indicate_request(4, (0, 0, 0))
+        elif current_invitation.type == "Player":
+            player_tracker.indicate_request(current_invitation.position-1, (0, 0, 0))
+        current_invitation = None
+
+def start_invitation(invite_type, position=None, timeout = 7000):
+    """
+    Start a new invitation if none exists.
+    
+    Args:
+        invite_type: String "Coder" or "Player"
+        position: Position number for player invitations (1-4)
+    Returns:
+        bool: True if invitation was started
+    """
+    global current_invitation
+    if current_invitation:
+        return False
+        
+    current_invitation = Invitation(invite_type, position)
+    invitation_timer.init(mode=Timer.ONE_SHOT, period=timeout, 
+                         callback=clear_invitation_and_display)
+    return True
+
+
+
 # --- Save and Load Game State ---
-def save_game_state(filename):
+def save_game_state(filename = GAME_STATE_FILE):
     """Save the current game state to a file."""
     with open(filename, "w") as f:
         json.dump(game_state.to_dict(), f)
     print("Game state saved.")
 
-def load_game_state(filename):
+def load_game_state(filename = GAME_STATE_FILE):
     """Load the game state from a file."""
     with open(filename, "r") as f:
         data = json.load(f)
         game_state.from_dict(data)
-        player_tracker.reset_all_progress()
+        player_tracker.reset_all_progress() # check this? 
         print("Previous game state loaded.")
 
 def backup_and_load_previous_game():
     """Backup the current game and load the previous game state."""
-    if os.path.exists(GAME_STATE_FILE):
-        save_game_state("backup_" + GAME_STATE_FILE)
-        load_game_state(GAME_STATE_FILE)
+    if os.path.exists(GAME_STATE_FILE): # If there is a saved game
+        save_game_state("backup_" + GAME_STATE_FILE) # Save current game a backup
+        load_game_state(GAME_STATE_FILE) # Load the saved game
+    else:
+        print("No Saved Game")
   
 #---Broadcast Functions---
 def send_to_close_modules(message, cutoff):
@@ -84,39 +140,57 @@ def send_to_close_modules(message, cutoff):
             networking.aen.send(key, message)
 
 # --- Button Handlers ---
-def button_detect_long_press(pin, duration=200):
+def button_detect_long_press(pin, duration=100, feedback=None):
+    """
+    Waits for a button press of duration and a release 
+    """
     start = time.ticks_ms()
-    while time.ticks_ms()-start<duration:
-        time.sleep(duration/10000)
-        # print(time.ticks_ms()-start<duration,":",pin.value())
-        if pin.value():
+    
+    # Make sure button is held down for short duration (not noise)
+    while time.ticks_diff(time.ticks_ms(),start)<duration:
+        time.sleep_ms(duration/10)      
+        if pin.value(): 
            return False
-    while not pin.value(): #wait for release
-        print("held")
-        time.sleep(duration/100000)
-    time.sleep(duration/2000)
+        
+    while not pin.value(): #wait for release        
+        time.sleep_ms(duration/10)
+        
+    time.sleep_ms(duration/10) # make sure release is finished
+                               # maybe remove when invitiation tracking works
     return True
     
 def add_coder_handler(pin):
     """Handler to initiate adding a coder."""
     print("Requesting coder...")
     if button_detect_long_press(pin):
-        game_state.reset_game()
-        max_display.draw_5x3_string("NEW GAME!")
-        max_display.show()
-        player_tracker.clear_all()
-        player_tracker.indicate_request(4, color=(0, 0, 255))  # Blue light for coder request
-        send_to_close_modules('Coder', -60)
+        if start_invitation("Coder"):
+            game_state.reset_game()
+            max_display.text("NEW GAME",0,0,1)
+            max_display.show()
+            player_tracker.clear_all()
+            player_tracker.indicate_request(4, color=(0, 0, 255))
+            send_to_close_modules('Coder', -60)
+        else:
+            print("Invitation already pending")
     else:
         print("Code Button Released Early")
         
 
 def add_player_handler(pin, player_number):
-    """Handler to initiate adding a specific player."""
+    """
+    Handler to initiate adding a specific player number.
+    
+    Args:
+        pin: Button pin object
+        player_number: Position number (1-4)
+    """
     print(f"Requesting player...")
     if button_detect_long_press(pin):
-        player_tracker.indicate_request(player_number-1, color=(255, 0, 0))  # Green light for player request
-        send_to_close_modules('Player', -60)
+        if start_invitation("Player", player_number):
+            player_tracker.indicate_request(player_number-1, color=(255, 0, 0))
+            send_to_close_modules('Player', -60)
+        else:
+            print("Invitation already pending")
     else:
         print("Player Button Released Early")
 
@@ -129,17 +203,19 @@ def undo_handler(pin):
 def shuffle_handler(pin):
     """Handler to recover the previous game state."""
     if button_detect_long_press(pin):
-        print("Undoing last reset...")
-        backup_and_load_previous_game()
+        print("SHUFFLE")
+        # TO DO
 
 # Assign button handlers
 coder_button.irq(trigger=Pin.IRQ_FALLING, handler=add_coder_handler)
 undo_button.irq(trigger=Pin.IRQ_FALLING, handler=undo_handler)
+random_button.irq(trigger=Pin.IRQ_FALLING, handler=shuffle_handler)
 
 def create_handler(num):
     # Returns a handler function specific to the player number
     def handler(pin):
         add_player_handler(pin, num)
+        
     return handler
 
 for i, button in enumerate(player_buttons):
@@ -147,35 +223,51 @@ for i, button in enumerate(player_buttons):
 
 
 # --- ESP-NOW Receive Handler ---
+
 def on_receive_callback():
+    """Handle incoming ESP-NOW messages."""
+    global current_invitation
+    
     for mac, msg, rtime in networking.aen.return_messages():
-        print('received',msg,type(msg))
-        # Handle coder confirmation
+        print('received', msg, type(msg))
+        
         if msg == 'Coder':
-            game_state.coder_mac = mac
-            print(f"Coder confirmed: {mac}")
-            max_display.draw_5x3_string("CODING")
-            max_display.show()
-            player_tracker.indicate_request(4, (0,0,0))
-           
+            if current_invitation and current_invitation.type == "Coder":
+                game_state.coder_mac = mac
+                print(f"Coder confirmed: {mac}")
+                max_display.text("CODE",0,0,1)
+                max_display.show()
+                player_tracker.indicate_request(4, (0,0,0))
+                invitation_timer.deinit()  # Cancel timeout timer
+                current_invitation = None  # Clear invitations
 
-        # Handle player confirmation
+            else:
+                print("No pending coder invitation")
+
         elif msg == 'Player':
-            game_state.add_player(mac)
-            if len(game_state.sequence) > 0:
-                networking.aen.send(mac, game_state.sequence) #if coder sequence is already "dumped", player "picks it up"
-            player_index = list(game_state.players.keys()).index(mac)
-            player_tracker.indicate_request(player_index, (0,0,0))
-            print(f"Player confirmed: {mac}")
+            if current_invitation and current_invitation.type == "Player":
+                position = current_invitation.position
+                if game_state.add_player(mac, position):
+                    if len(game_state.sequence) > 0:
+                        networking.aen.send(mac, game_state.sequence)
+                    player_tracker.indicate_request(position-1, (0,0,0))
+                    print(f"Player confirmed: {mac}")
+                invitation_timer.deinit()  # Cancel timeout timer
+                current_invitation = None  # Clear invitations
+                
+            else:
+                print("No pending player invitation")
 
-        # Handle sequence broadcast
+         # Handle sequence broadcast
         elif isinstance(msg, list):
             # Handle coder sequence
             if mac == game_state.coder_mac:
                 sequence = msg
                 if len(game_state.sequence) == 0:   #if no coder sequence before and players registered, send to registered players
-                    for key in game_state.players:
-                        networking.aen.send(key, sequence)
+                    # Send sequence to all registered players
+                    for position, player_data in game_state.players.items():
+                        if player_data["mac"]:  # if there's a player at this position
+                            networking.aen.send(player_data["mac"], sequence)
                 save_game_state(GAME_STATE_FILE)
                 print('saving game state')
                 game_state.reset_game()
@@ -189,11 +281,12 @@ def on_receive_callback():
             # Handle player progress update    
             else:
                 step = len(msg)
-                if mac in game_state.players:
+                # Find player position from MAC address
+                position = game_state.get_player_position(mac)
+                if position is not None:
                     game_state.update_progress(mac, step)
-                    player_index = list(game_state.players.keys()).index(mac)
-                    player_tracker.update_player_progress(player_index, step, game_state.sequence)
-                    print(f"Player {player_index} updated to step {step}")
+                    player_tracker.update_player_progress(position-1, step, game_state.sequence)
+                    print(f"Player at position {position} updated to step {step}")
 
 networking.aen.irq(on_receive_callback)
 
