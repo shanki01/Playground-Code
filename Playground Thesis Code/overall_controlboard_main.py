@@ -147,6 +147,7 @@ for i, button in enumerate(player_buttons):
 # --- ESP-NOW Receive Handler ---
 def on_receive_callback():
     for mac, msg, rtime in networking.aen.return_messages():
+        print('received',msg,type(msg))
         # Handle coder confirmation
         if msg == 'Coder':
             game_state.coder_mac = mac
