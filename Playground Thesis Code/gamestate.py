@@ -1,89 +1,208 @@
 import time
+
 class GameState:
     def __init__(self, coder_mac=None, sequence=None):
         """
-        Initialize the game state.
+        Initialize the game state with position-based player tracking.
         
-        :param coder_mac: MAC address of the coder (game master).
-        :param sequence: Optional initial sequence (list of numbers).
+        Args:
+            coder_mac: MAC address of coder device
+            sequence: Optional initial game sequence
         """
         self.coder_mac = coder_mac
         self.sequence = sequence if sequence else []
-        self.players = {}  # Dictionary to store players and their progress
-
+        # Initialize player positions with None values
+        self.players = {
+            1: {"mac": None, "progress": 0, "last_connection": None},
+            2: {"mac": None, "progress": 0, "last_connection": None},
+            3: {"mac": None, "progress": 0, "last_connection": None},
+            4: {"mac": None, "progress": 0, "last_connection": None}
+        }
+        
     def set_sequence(self, sequence):
-        """Set the game sequence provided by the coder."""
+        """
+        Set the game sequence.
+        
+        Args:
+            sequence: List of numbers between 1 and 10
+        
+        Raises:
+            ValueError: If sequence contains invalid numbers
+        """
         if all(1 <= num <= 10 for num in sequence):
             self.sequence = sequence
             print(f"Game sequence set to: {self.sequence}")
         else:
             raise ValueError("Sequence must be a list of numbers between 1 and 10.")
+    
+    def add_player(self, mac_address, position): # added position
+        """
+        Add a player at a specific position.
+        
+        Args:
+            mac_address: Player's device MAC address
+            position: Position number (1-4)
+        
+        Returns:
+            bool: True if player was added, False if position is occupied
+        """
+        if position not in self.players:
+            print(f"Invalid position: {position}. Must be between 1 and 4.")
+            return False
+            
+        if self.players[position]["mac"] is not None:
+            print(f"Position {position} is already occupied.")
+            return False
+            
+        self.players[position] = {
+            "mac": mac_address,
+            "progress": 0,
+            "last_connection": time.ticks_ms()
+        }
+        print(f"Player {mac_address} added at position {position}")
+        return True
 
-    def add_player(self, mac_address):
-        """Add a player with the given MAC address."""
-        if len(self.players) >= 4:
-            print("Cannot add more than 4 players.")
-            return
-        if mac_address not in self.players:
-            self.players[mac_address] = 0  # Initial progress is 0
-            print(f"Player {mac_address} added.")
+    
+     def remove_player(self, position): # now by position instead of mac
+        """
+        Remove a player from a specific position.
+        
+        Args:
+            position: Position number (1-4)
+        """
+        if position in self.players:
+            self.players[position] = {
+                "mac": None, 
+                "progress": 0, 
+                "last_connection": None
+            }
+            print(f"Player at position {position} removed.")
         else:
-            print(f"Player {mac_address} is already in the game.")
+            print(f"Invalid position: {position}")            
+            
+     def update_progress(self, mac_address, step):
+        """
+        Update progress for a player with given MAC address.
+        
+        Args:
+            mac_address: Player's device MAC address
+            step: Current progress step (0-8)
+        """
+        for position, player in self.players.items():
+            if player["mac"] == mac_address:
+                player["progress"] = min(step, 8)
+                player["last_connection"] = time()
+                print(f"Player at position {position} progress updated to step {step}.")
+                return
+        print(f"Player {mac_address} not found.")
 
-    def remove_player(self, mac_address):
-        """Remove a player by their MAC address."""
-        if mac_address in self.players:
-            del self.players[mac_address]
-            print(f"Player {mac_address} removed.")
-        else:
-            print(f"Player {mac_address} not found.")
-
-    def update_progress(self, mac_address, step):
-        """Update the progress of a player."""
-        if mac_address in self.players:
-            self.players[mac_address] = min(step, 8)  # Cap progress at 8 steps
-            print(f"Player {mac_address} progress updated to step {step}.")
-        else:
-            print(f"Player {mac_address} not found. Add the player first.")
-
-    def get_player_progress(self, mac_address):
-        """Get the progress of a specific player."""
-        return self.players.get(mac_address, None)
-
-    def get_all_progress(self):
-        """Get progress for all players."""
-        return self.players
+    def update_connection(self, mac_address):
+        """
+        Update last connection time for a player.
+        
+        Args:
+            mac_address: Player's device MAC address
+        """
+        for player in self.players.values():
+            if player["mac"] == mac_address:
+                player["last_connection"] = time.ticks_ms()
+                return
+            
+    def get_player_position(self, mac_address):
+        """
+        Get position number for a given MAC address.
+        
+        Args:
+            mac_address: Player's device MAC address
+        
+        Returns:
+            int: Position number (1-4) or None if not found
+        """
+        for position, player in self.players.items():
+            if player["mac"] == mac_address:
+                return position
+        return None
+    
+    
+    def get_position_status(self, position):
+        """
+        Get status of a position.
+        
+        Args:
+            position: Position number (1-4)
+        
+        Returns:
+            dict: Player data for the position or None if invalid position
+        """
+        return self.players.get(position)
+    
+#     def get_player_progress(self, mac_address):
+#         """Get the progress of a specific player."""
+#         return self.players.get(mac_address, None)
+# 
+#     def get_all_progress(self):
+#         """Get progress for all players."""
+#         return self.players
 
     def reset_game(self):
-        """Reset the game state."""
-        self.players = {}
+        """
+        Reset the game state for a NEW GAME
+        All players are removed.
+        The sequence is deleted.
+        
+        """
+        
+        for position in self.players:
+            self.players[position] = {
+                "mac": None,
+                "progress": 0,
+                "last_connection": None
+            }
         self.sequence = []
-        print("Game has been reset.")
+        print("Game has been reset. Players removed.")
 
-    def to_dict(self):
-        """Convert the game state to a dictionary for saving."""
+  def to_dict(self):
+        """
+        Convert game state to dictionary for saving.
+        
+        Returns:
+            dict: Game state data
+        """
         return {
             "coder_mac": self.coder_mac,
             "sequence": self.sequence,
             "players": self.players
         }
-
+    
     def from_dict(self, data):
-        """Restore the game state from a dictionary."""
+        """
+        Restore game state from dictionary.
+        
+        Args:
+            data: Dictionary containing game state data
+        """
         self.coder_mac = data.get("coder_mac")
         self.sequence = data.get("sequence", [])
         self.players = data.get("players", {})
+        
+#     def reset_player_activity(self, mac_address):
+#         """Reset the activity timestamp for a player."""
+#         self.players[mac_address] = time.time()
 
-    def reset_player_activity(self, mac_address):
-        """Reset the activity timestamp for a player."""
-        self.players[mac_address] = time.time()
+    def remove_inactive_players(self, timeout=600000):
+        """
+        Remove players who have been inactive for the specified timeout duration.
 
-    def remove_inactive_players(self, timeout):
-        """Remove players who have been inactive for the specified timeout duration."""
-        current_time = time.time()
-        inactive_players = [mac for mac, last_active in self.players.items() if current_time - last_active > timeout]
-        for mac in inactive_players:
-            self.remove_player(mac)
+        Args:
+            timeout: time elasped to be considered inactive, default 600000ms (10 minutes)
+        """
+        
+        current_time = time.ticks_ms()
+        
+        for position, player in self.players.items():
+            if time.ticks_diff(player["last_connection"], current_time) > timeout:
+                self.remove_player(position)
+                
 
 # Example Usage
 if __name__ == "__main__":
