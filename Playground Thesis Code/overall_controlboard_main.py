@@ -188,7 +188,7 @@ def add_player_handler(pin, player_number):
     if button_detect_long_press(pin):
         if start_invitation("Player", player_number):
             player_tracker.indicate_request(player_number-1, color=(255, 0, 0))
-            send_to_close_modules('Player', -60)
+            send_to_close_modules('Player' + str(player_number), -60)
         else:
             print("Invitation already pending")
     else:
@@ -244,8 +244,9 @@ def on_receive_callback():
             else:
                 print("No pending coder invitation")
 
-        elif msg == 'Player':
+        elif 'Player' in msg:
             if current_invitation and current_invitation.type == "Player":
+                msg_position = msg[-1] #just in case we want to error check
                 position = current_invitation.position
                 if game_state.add_player(mac, position):
                     if len(game_state.sequence) > 0:
