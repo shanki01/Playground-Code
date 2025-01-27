@@ -9,7 +9,7 @@ import sensors
 from module import Module
 from machine import Pin, SoftI2C, PWM, ADC, Timer
 
-module = Module('Leopard')
+module = Module('Duck')
 num = None
 last_num = None
 checked = False
@@ -38,14 +38,14 @@ def receive():
             if module.status == 'Coder':
                 switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
             
-        elif message == 'Player':
+        elif 'Player' in message:
             switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
             module.screen_display(None)
-            module.screen_display('Accept Player?')
+            module.screen_display('Accept' + message + '?')
             start_time = time.time()
             while time.time() - start_time < 5:  # Keep active for 5 seconds
                 if switch_select.value() == 0:
-                    module.switch_status('Coder',mac)
+                    module.switch_status(message, mac)
                     print('Player Accepted')
                     time.sleep(0.5)
                     num = None
@@ -106,11 +106,10 @@ status.init(period=3000, mode=Timer.PERIODIC, callback=module.checkstatus)
 while True:
     if module.status == 'Coder':
         if module.count < 8:
-            if num != None:
-                if module.board_name() == 'Music' or num != last_num:
-                    module.add_to_sequence(num)
-                    module.count += 1
-                    last_num = num
+            if not checked and num != None:
+                module.add_to_sequence(num)
+                module.count += 1
+                checked = True
         if module.count > 0:
             while module.board_rssi > -50:
                 if module.screen_message != 'Send?':
@@ -121,7 +120,7 @@ while True:
                 module.screen_display(None)
                 in_range = False
             
-    elif module.status == 'Player' and len(module.sequence) > 0:
+    elif module.status == 'Player' and len(module.sequence) > 0 and len(module.player_sequence) < len(module.sequence):
         if not checked and num != None:
             matches = module.check_buffer(num)
             checked = True

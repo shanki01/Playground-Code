@@ -258,7 +258,6 @@ def on_receive_callback():
             else:
                 print("No pending player invitation")
 
-         # Handle sequence broadcast
         elif isinstance(msg, list):
             # Handle coder sequence
             if mac == game_state.coder_mac:
@@ -268,9 +267,9 @@ def on_receive_callback():
                     for position, player_data in game_state.players.items():
                         if player_data["mac"]:  # if there's a player at this position
                             networking.aen.send(player_data["mac"], sequence)
+
                 save_game_state(GAME_STATE_FILE)
                 print('saving game state')
-                game_state.reset_game()
                 player_tracker.reset_all_progress()
                 game_state.set_sequence(sequence)
                 player_tracker.display_coder_sequence(sequence)

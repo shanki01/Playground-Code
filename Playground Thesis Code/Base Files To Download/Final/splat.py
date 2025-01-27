@@ -114,7 +114,7 @@ class Splat:
             rssi = self.networking.aen.rssi()[key][0]
             print(rssi)
             print(self.networking.aen.peer_name(key))
-            if self.networking.aen.peer_name(key) in self.modules and rssi > -100:
+            if self.networking.aen.peer_name(key) in self.modules and rssi > -85:
                 self.networking.aen.send(key, self.name)
         
     def play_sound(self):

@@ -3,7 +3,7 @@ import struct
 from machine import Pin, SoftI2C, PWM, ADC
 from button import Splat
 
-s = Splat('5')
+s = Splat('8')
 s.set_color()
 
 def callback(pin):
@@ -15,7 +15,6 @@ s.sw1.irq(trigger=Pin.IRQ_RISING, handler=callback)
     
 while True:
     if s.is_pressed:
-        print('pressed')
         s.send_to_close_modules()
         s.is_pressed = False
-    time.sleep(0.1)
+    time.sleep(0.5)
