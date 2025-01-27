@@ -144,13 +144,14 @@ class Module:
             return False
     
     def switch_status(self, status, mac):
-        self.status = status
         self.board_mac = mac
         self.screen_display(None)
         self.clear_display()
+        self.sequence = []
         if status == 'Coder':
-            self.sequence = []
+            self.status = status
             self.count = 0
-        elif status == 'Player':
+        elif 'Player' in status:
+            self.status = 'Player'
             self.player_sequence = []
         self.send(self.board_mac, status)

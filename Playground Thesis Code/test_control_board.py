@@ -4,7 +4,7 @@ from networking import Networking
 import time
 import ujson as json
 import os
-from playertracker import PlayerTracker
+#from playertracker import PlayerTracker
 from gamestate import GameState
 import time
 
@@ -87,13 +87,13 @@ def add_coder_handler(pin):
     """Handler to initiate adding a coder."""
     print("Requesting coder...")
     #player_tracker.indicate_request(0, color=(0, 0, 255))  # Blue light for coder request
-    send_to_close_modules('coder', -50)
+    send_to_close_modules('Coder', -50)
 
 def add_player_handler(pin):
     """Handler to initiate adding a specific player."""
     print(f"Requesting player...")
     #player_tracker.indicate_request(player_number, color=(0, 255, 0))  # Green light for player request
-    send_to_close_modules('player', -50)
+    send_to_close_modules('Player', -50)
 
 def undo_handler(pin):
     """Handler to recover the previous game state."""
@@ -112,13 +112,13 @@ player_button.irq(trigger=Pin.IRQ_FALLING, handler=add_player_handler)
 def on_receive_callback():
     for mac, msg, rtime in networking.aen.return_messages():
         # Handle coder confirmation
-        if msg == 'coder':
+        if msg == 'Coder':
             game_state.coder_mac = mac
             print(f"Coder confirmed: {mac}")
             #reset_activity(mac)
 
         # Handle player confirmation
-        elif msg == 'player':
+        elif msg == 'Player':
             game_state.add_player(mac)
             #reset_activity(mac)
             if len(game_state.sequence) > 0:
