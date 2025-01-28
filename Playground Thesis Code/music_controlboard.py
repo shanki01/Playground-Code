@@ -202,6 +202,7 @@ class MusicBoard:
         self.current_coder = None  # MAC address of current coder
         self.coders_list = set()   # Set of all coder MAC addresses
         self.invitation_active = False
+        #self.is_playing = False
         
         # Display ready state
         self._show_ready_state()
@@ -292,7 +293,7 @@ class MusicBoard:
             self.debug_print(f"Invalid grid position: col={col}, row={row}")
             return None
             
-        base = (7 - col) * 8
+        base = (col) * 8 #(7-col) * 8
         index = base + (7 - row)
         
         if not (0 <= index < 64):
@@ -316,12 +317,13 @@ class MusicBoard:
        
             
         suffix = TEMPOS[self.current_style]['file_suffix']
-        filename = f"note{note_number}{suffix}.wav"
+        filename = f"notet{note_number}{suffix}.wav"
+        print("playing file", filename)
         
         
-        with open(filename, "rb") as wav_file:
-            play_sound(wav_file)
-            self.debug_print(f"Playing {filename}")
+        
+        play_sound(filename)
+        self.debug_print(f"Playing {filename}")
                 
 
     def _parse_wav_header(self, file):
@@ -349,23 +351,20 @@ class MusicBoard:
         Updates display to highlight current beat
         Handles playback errors and stops sequence if error occurs
         """
-        if not self.is_playing or not self.current_sequence:
+        if not self.game_state == 'PLAYING': # or not self.current_sequence:
             return
             
-        try:
-            self.current_beat = (self.current_beat + 1) % len(self.current_sequence)
-            note = self.current_sequence[self.current_beat]
-            
-            # Update display with highlighted column
-            self.display_sequence(self.current_sequence, self.current_beat)
-            
-            # Play the note
-            if note is not None:
-                self._play_note(note)
-                
-        except Exception as e:
-            self.debug_print(f"Playback error: {e}")
-            self._stop_playback()  # Safety stop
+        
+        self.current_beat = (self.current_beat + 1) % len(self.current_sequence)
+        note = self.current_sequence[self.current_beat]
+        
+        # Update display with highlighted column
+        self.display_sequence(self.current_sequence, self.current_beat)
+        
+        # Play the note
+        if note is not None:
+            self._play_note(note)
+
 
     def _update_button_leds(self):
         """Update button LEDs based on current state."""
@@ -390,37 +389,37 @@ class MusicBoard:
         
         self.np.write()
         
-    def _start_invitation_timer(self):
-        """Start timer for coder invitation timeout."""
-        def _timeout_handler(timer):
-            self.debug_print("Invitation timer triggered")  # Add debug print
-            if self.game_state == 'INVITING':
-                self.debug_print("Resetting to READY state")
-                self.game_state = 'READY'
-                self.invitation_active = False  # Also reset this flag
-                self._update_button_leds()
-                self.debug_print("Invitation timeout complete")
-        
-        self.debug_print("Starting invitation timer")  # Add debug print
-        timer = Timer(3)
-        timer.init(mode=Timer.ONE_SHOT, period=5000, callback=_timeout_handler)    
-    
-    def _animate_buttons(self, timer):
-        """
-        Update button pulsing animation.
-        
-        Args:
-            timer: Timer instance (unused but required for callback)
-        """
-        self.button_brightness += self.pulse_direction * 5
-        if self.button_brightness >= 100:
-            self.button_brightness = 100
-            self.pulse_direction = -1
-        elif self.button_brightness <= 20:
-            self.button_brightness = 20
-            self.pulse_direction = 1
-            
-        self._update_button_leds()
+#     def _start_invitation_timer(self):
+#         """Start timer for coder invitation timeout."""
+#         def _timeout_handler(timer):
+#             self.debug_print("Invitation timer triggered")  # Add debug print
+#             if self.game_state == 'INVITING':
+#                 self.debug_print("Resetting to READY state")
+#                 self.game_state = 'READY'
+#                 #self.invitation_active = False  # Also reset this flag
+#                 self._update_button_leds()
+#                 self.debug_print("Invitation timeout complete")
+#         
+#         self.debug_print("Starting invitation timer")  # Add debug print
+#         timer = Timer(3)
+#         timer.init(mode=Timer.ONE_SHOT, period=5000, callback=_timeout_handler)    
+#     
+#     def _animate_buttons(self, timer):
+#         """
+#         Update button pulsing animation.
+#         
+#         Args:
+#             timer: Timer instance (unused but required for callback)
+#         """
+#         self.button_brightness += self.pulse_direction * 5
+#         if self.button_brightness >= 100:
+#             self.button_brightness = 100
+#             self.pulse_direction = -1
+#         elif self.button_brightness <= 20:
+#             self.button_brightness = 20
+#             self.pulse_direction = 1
+#             
+#         self._update_button_leds()
 
     def _stop_playback(self):
         """
@@ -429,9 +428,10 @@ class MusicBoard:
         Stops timers and resets playback state.
         """
         self.play_timer.deinit()
-        self.button_animation_timer.deinit()
+        #self.button_animation_timer.deinit()
         self.current_beat = -1
         self.display_sequence(self.current_sequence)  # Remove highlight
+        self.game_state == 'PAUSED'
 
     def display_sequence(self, sequence, highlight_col=None):
         """
@@ -501,11 +501,11 @@ class MusicBoard:
         if self.game_state == 'READY':
             self.debug_print("Coder button pressed - transitioning to INVITING")
             self.game_state = 'INVITING'
-            self.invitation_active = True
+            #self.invitation_active = True
             self.networking.aen.send(broadcast_mac, 'Coder')
             self._update_button_leds()
-            self._start_invitation_timer()
-            self.debug_print("Invitation sequence complete")
+            #self._start_invitation_timer()
+            #self.debug_print("Invitation sequence complete")
 
     def _play_button_handler(self, pin):
         """Handle play button with state transitions."""
@@ -513,10 +513,12 @@ class MusicBoard:
             return
             
         if self.game_state == 'PLAYING':
+            print("Pause Button")
             self.game_state = 'PAUSED'
             self._stop_playback()
         elif self.game_state == 'PAUSED' and self.current_sequence:
             self.game_state = 'PLAYING'
+            print("Play Button")
             self._start_playback()
         self._update_button_leds()
 
@@ -530,7 +532,7 @@ class MusicBoard:
         self.current_style = self.styles[(current_index + 1) % len(self.styles)]
         
         # If currently playing, restart with new tempo
-        was_playing = self.is_playing
+        was_playing = self.game_state == 'PLAYING'
         if was_playing:
             self._stop_playback()
         self._update_button_leds()
@@ -546,17 +548,19 @@ class MusicBoard:
         tempo_delay = TEMPOS[self.current_style]['delay']
         self.play_timer.init(period=tempo_delay, mode=Timer.PERIODIC, 
                            callback=self._play_sequence_step)
+        self.game_state = 'PLAYING'
+        
         
         # Start button animation
-        self.button_animation_timer.init(period=50, mode=Timer.PERIODIC,
-                                       callback=self._animate_buttons)
+        #self.button_animation_timer.init(period=50, mode=Timer.PERIODIC,
+                                       #callback=self._animate_buttons)
     def handle_error_state(self):
         """
         Handle error state with visual feedback.
         
         Returns:
             bool: True if system is in error state
-            
+                                 bv
         Sets all button LEDs to red in error state
         """
         if self.error_state:
@@ -583,19 +587,19 @@ coder_button.irq(trigger=Pin.IRQ_FALLING, handler=board._coder_button_handler)
 play_button.irq(trigger=Pin.IRQ_FALLING, handler=board._play_button_handler)
 style_button.irq(trigger=Pin.IRQ_FALLING, handler=board._style_button_handler)
 
-def network_callback(self):
+def network_callback():
         """Handle network messages with state transitions."""
         for mac, msg, rtime in networking.aen.return_messages():
             print('received', msg, type(msg))
             
-            if msg == 'Coder' and board.game_state == 'INVITING':
+            if msg == 'Coder': #and board.game_state == 'INVITING':
                 board.coders_list.add(mac)
                 board.current_coder = mac
                 board.game_state = 'WAITING'
                 board._update_button_leds()
                 
             elif isinstance(msg, list) and len(msg) <= 8:
-                if mac in board.coders_list and all(1 <= x <= 8 for x in msg):
+                if mac in board.coders_list:
                     board.current_sequence = msg
                     board.game_state = 'PLAYING'
                     board.display_sequence(msg)
