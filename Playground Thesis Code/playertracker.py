@@ -9,11 +9,21 @@ colors = {
         4:(0,255,0), #green
         5:(0,255,255), #cyan
         6:(0,0,255), #blue
-        7:(100,0,190), #purple
-        8:(255,70,200), #pink
+        7:(50,0,255), #purple
+        8:(150,70,200), #pink
         }
-        
 
+    # Button LED status colors
+BUTTON_STATES = {
+        'unassigned': (0, 0, 0),      # off
+        'requesting': (0, 0, 255),   # blue
+        'connected': (0, 125, 125),      # teal
+        'completed': (0, 255, 0),   # green
+        'disconnected': (125, 125, 0),   # yellow
+    }
+       
+    
+    
 class PlayerTracker:
     def __init__(self, pin, num_rows=5, row_length=8, init_skip=1, row_skip=4, buttons=5):
         """
@@ -28,11 +38,36 @@ class PlayerTracker:
         self.row_skip = row_skip
         self.num_rows = num_rows
         self.row_length = row_length
-        self.total_leds = num_rows * (row_length+row_skip)+init_skip+buttons
+        self.total_leds = num_rows * (row_length+row_skip)-row_skip+init_skip+buttons
+        
+            
         self.np = neopixel.NeoPixel(Pin(pin), self.total_leds)
         self.clear_all()
         self.COLOR_MAP = self.generate_color_map()
 
+    def set_button_led(self, position, button_state):
+        """
+        Set button LED color. Buttons are at end of chain in reverse order.
+        
+        Args:
+            position: Button position (0=coder, 1-4=players)
+            button_state: from BUTTON_STATES
+        """
+        if 0 <= position <= 4:
+            if button_state in BUTTON_STATES:
+            # Calculate actual LED position
+                color = BUTTON_STATES[button_state]
+                
+                base_index = self.total_leds - self.buttons  # Start of button section
+                if position == 0:
+                    led_index = self.total_leds - 1  # Coder is last LED
+                else:
+                    led_index = base_index + (4 - position)  # Players are reversed 4,3,2,1
+                print("setting button color", color, "at", led_index)
+                self.np[led_index] = color
+                self.np.write()
+            
+    
     def clear_all(self):
         """Clear all LEDs."""
         self.np.fill((0, 0, 0))
@@ -85,8 +120,8 @@ class PlayerTracker:
         :param progress: Number of steps completed (0 to 8).
         :param sequence: The game sequence to determine the color for each step.
         """
-        if player_index < 0 or player_index >= (self.num_rows - 1):
-            print(f"Invalid player index: {player_index}. Must be between 0 and 3.")
+        if player_index < 0 or player_index >= (self.num_rows-1):
+            print(f"Invalid player index: {player_index}. Must be between 0 and 4.")
             return
 
         row_start = (player_index) * (self.row_length+self.row_skip)+self.init_skip
@@ -103,10 +138,10 @@ class PlayerTracker:
         """
         Clear the progress lights for a specific player.
 
-        :param player_index: Index of the player (0 to 3).
+        :param player_index: Index of the player (0 to 4).
         """
         if player_index < 0 or player_index >= (self.num_rows - 1):
-            print(f"Invalid player index: {player_index}. Must be between 0 and 3.")
+            print(f"Invalid player index: {player_index}. Must be between 0 and 4.")
             return
 
         row_start = (player_index) * (self.row_length+self.row_skip)+self.init_skip
@@ -118,7 +153,8 @@ class PlayerTracker:
     
     def reset_all_progress(self):
         """Clear the progress lights for all players."""
-        self.clear_all()
+        for i in range(self.num_rows):
+            self.clear_player_progress(i)
         print("All player progress reset.")
 
     def indicate_request(self, player_index, color=(255, 255, 0)):
