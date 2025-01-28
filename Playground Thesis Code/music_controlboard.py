@@ -30,14 +30,14 @@ BUFFER_SIZE = 1024  # Adjustable based on available memory
 
 # Color mapping for notes (in GRB format)
 NOTE_COLORS = {
-    1: (0, 255, 0),    # Red for C (Middle C)
-    2: (127, 255, 0),  # Orange for D
+    1: (200, 0, 0),    # Red for C (Middle C)
+    2: (255, 127, 0),  # Orange for D
     3: (255, 255, 0),  # Yellow for E
     4: (0, 255, 0),    # Green for F
     5: (0, 255, 255),  # Cyan for G
     6: (0, 0, 255),    # Blue for A
-    7: (0, 50, 255),   # Purple for B
-    8: (70, 150, 200), # Pink for High C
+    7: (50, 0, 255),   # Purple for B
+    8: (150, 70, 200), # Pink for High C
     None: (0, 0, 0)    # Off
 }
 
@@ -52,7 +52,7 @@ BUTTON_STATES = {
 
 STATES = {
     'READY': {  # Initial state, waiting for coder
-        'coder_led': 'inactive',
+        'coder_led': 'playing',
         'play_led': 'inactive',
         'description': 'Ready for new coder'
     },
@@ -62,18 +62,18 @@ STATES = {
         'description': 'Inviting coder'
     },
     'WAITING': {  # Have coder, waiting for sequence
-        'coder_led': 'active',
+        'coder_led': 'playing',
         'play_led': 'inactive',
         'description': 'Waiting for sequence'
     },
     'PLAYING': {  # Playing a sequence
-        'coder_led': 'active',
-        'play_led': 'playing',
+        'coder_led': 'paused',
+        'play_led': 'paused',
         'description': 'Playing sequence'
     },
     'PAUSED': {  # Sequence loaded but not playing
-        'coder_led': 'active',
-        'play_led': 'paused',
+        'coder_led': 'playing',
+        'play_led': 'playing',
         'description': 'Sequence paused'
     },
     'ERROR': {  # Error state
@@ -373,7 +373,7 @@ class MusicBoard:
         
         # Coder button (index 64)
         coder_color = BUTTON_STATES[state_config['coder_led']]
-        self.np[64] = tuple(int(c * brightness) for c in coder_color)
+        self.np[66] = tuple(int(c * brightness) for c in coder_color)
         
         # Play/Pause button (index 65)
         play_color = BUTTON_STATES[state_config['play_led']]
@@ -385,7 +385,7 @@ class MusicBoard:
             'fast': (255, 0, 0),      # Red
             'slow': (0, 0, 255)       # Blue
         }
-        self.np[66] = tuple(int(c * brightness) for c in style_colors[self.current_style])
+        self.np[64] = tuple(int(c * brightness) for c in style_colors[self.current_style])
         
         self.np.write()
         
@@ -449,9 +449,17 @@ class MusicBoard:
                     led_index = self._get_grid_index(col, note - 1)
                     if led_index is not None:
                         color = NOTE_COLORS[note]
-                        
                         if col == highlight_col:
-                            color = tuple(min(255, c * 2) for c in color)
+                            if note == 1:
+                                color=(255,0,0)
+                            #elif col%2 != 0:
+                             #   print(range(0-(8-note),note-(8-note)))
+                              #  for i in range(0,note):
+                               #     self.np[(col*8)+i] = color
+                            else: 
+                                print(range(8-note,8))
+                                for i in range(8-note,8):
+                                    self.np[(col*8+i)] = color
                             
                         self.np[led_index] = color
             
@@ -489,7 +497,7 @@ class MusicBoard:
                 if (i + j) % 2 == 0:
                     led_index = self._get_grid_index(i, j)
                     if led_index is not None:
-                        self.np[led_index] = (0, 0, 255)  # Blue checkerboard pattern
+                        self.np[led_index] = NOTE_COLORS[i+1]#(0, 0, 255)  # Blue checkerboard pattern
         self._update_button_leds()
         self.np.write()
 
@@ -517,11 +525,12 @@ class MusicBoard:
         #    self.game_state = 'PAUSED'
         #    self._stop_playback()
         #elif self.game_state == 'PAUSED' and
-        if self.current_sequence:
-            self.game_state = 'PAUSED'
+        if self.current_sequence and not self.game_state == 'PLAYING':
+            self.game_state = 'PLAYING'
             print("Play Button")
             self._start_playback()
         self._update_button_leds()
+        self.game_state = 'PAUSED'
 
     def _style_button_handler(self, pin):
         """Handle style button press to change tempo."""
@@ -534,8 +543,8 @@ class MusicBoard:
         
         # If currently playing, restart with new tempo
         was_playing = self.game_state == 'PLAYING'
-        if was_playing:
-            self._stop_playback()
+        #if was_playing:
+            #self._stop_playback()
         self._update_button_leds()
         if was_playing:
             self._start_playback()
@@ -551,9 +560,13 @@ class MusicBoard:
         #self.play_timer.init(period=tempo_delay, mode=Timer.PERIODIC, callback=self._play_sequence_step)
         print(tempo_delay)
         for i in range(0,len(self.current_sequence)):
-            self._play_sequence_step(None)
-            #time.sleep(tempo_delay/1000)
-        self.game_state = 'PLAYING'
+            if self.game_state == 'PLAYING':
+                self._play_sequence_step(None)
+                #time.sleep(tempo_delay/1000)
+            else:
+                break
+        self.display_sequence(self.current_sequence)  # Remove highlight
+        self.game_state == 'PAUSED'
         
         # Start button animation
         #self.button_animation_timer.init(period=50, mode=Timer.PERIODIC,
@@ -605,7 +618,7 @@ def network_callback():
             elif isinstance(msg, list) and len(msg) <= 8:
                 #if mac in board.coders_list:
                 board.current_sequence = msg
-                board.game_state = 'PLAYING'
+                board.game_state = 'PAUSED'
                 board.display_sequence(msg)
                 #board._start_playback()
 
