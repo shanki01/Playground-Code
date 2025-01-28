@@ -18,8 +18,8 @@ NEOPIXEL_PIN = 21
 I2S_SCK_PIN = 20  # Serial Clock
 I2S_WS_PIN = 18   # Word Select
 I2S_SD_PIN = 19   # Serial Data
-CODER_BUTTON_PIN = 2
-PLAY_BUTTON_PIN = 1
+CODER_BUTTON_PIN = 1
+PLAY_BUTTON_PIN = 2
 STYLE_BUTTON_PIN = 0
 
 # Constants
@@ -351,8 +351,8 @@ class MusicBoard:
         Updates display to highlight current beat
         Handles playback errors and stops sequence if error occurs
         """
-        if not self.game_state == 'PLAYING': # or not self.current_sequence:
-            return
+        #if not self.game_state == 'PLAYING': # or not self.current_sequence:
+        #    return
             
         
         self.current_beat = (self.current_beat + 1) % len(self.current_sequence)
@@ -498,26 +498,27 @@ class MusicBoard:
         if not self._debounce(pin):
             return
             
-        if self.game_state == 'READY':
-            self.debug_print("Coder button pressed - transitioning to INVITING")
-            self.game_state = 'INVITING'
-            #self.invitation_active = True
-            self.networking.aen.send(broadcast_mac, 'Coder')
-            self._update_button_leds()
-            #self._start_invitation_timer()
-            #self.debug_print("Invitation sequence complete")
+        #if self.game_state == 'READY' :
+        self.debug_print("Coder button pressed - NOT transitioning to INVITING")
+        #self.game_state = 'INVITING'
+        #self.invitation_active = True
+        self.networking.aen.send(broadcast_mac, 'Coder')
+        self._update_button_leds()
+        #self._start_invitation_timer()
+        #self.debug_print("Invitation sequence complete")
 
     def _play_button_handler(self, pin):
         """Handle play button with state transitions."""
         if not self._debounce(pin):
             return
             
-        if self.game_state == 'PLAYING':
-            print("Pause Button")
+        #if self.game_state == 'PLAYING':
+        #    print("Pause Button")
+        #    self.game_state = 'PAUSED'
+        #    self._stop_playback()
+        #elif self.game_state == 'PAUSED' and
+        if self.current_sequence:
             self.game_state = 'PAUSED'
-            self._stop_playback()
-        elif self.game_state == 'PAUSED' and self.current_sequence:
-            self.game_state = 'PLAYING'
             print("Play Button")
             self._start_playback()
         self._update_button_leds()
@@ -546,10 +547,13 @@ class MusicBoard:
             
         self.current_beat = -1  # Reset to start
         tempo_delay = TEMPOS[self.current_style]['delay']
-        self.play_timer.init(period=tempo_delay, mode=Timer.PERIODIC, 
-                           callback=self._play_sequence_step)
+
+        #self.play_timer.init(period=tempo_delay, mode=Timer.PERIODIC, callback=self._play_sequence_step)
+        print(tempo_delay)
+        for i in range(0,len(self.current_sequence)):
+            self._play_sequence_step(None)
+            #time.sleep(tempo_delay/1000)
         self.game_state = 'PLAYING'
-        
         
         # Start button animation
         #self.button_animation_timer.init(period=50, mode=Timer.PERIODIC,
@@ -599,11 +603,11 @@ def network_callback():
                 board._update_button_leds()
                 
             elif isinstance(msg, list) and len(msg) <= 8:
-                if mac in board.coders_list:
-                    board.current_sequence = msg
-                    board.game_state = 'PLAYING'
-                    board.display_sequence(msg)
-                    board._start_playback()
+                #if mac in board.coders_list:
+                board.current_sequence = msg
+                board.game_state = 'PLAYING'
+                board.display_sequence(msg)
+                #board._start_playback()
 
 networking.aen.irq(network_callback)
 
