@@ -9,7 +9,7 @@ import sensors
 from module import Module
 from machine import Pin, SoftI2C, PWM, ADC, Timer
 
-module = Module('Duck')
+module = Module('Lion')
 num = None
 last_num = None
 checked = False
@@ -41,7 +41,7 @@ def receive():
         elif 'Player' in message:
             switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
             module.screen_display(None)
-            module.screen_display('Accept' + message + '?')
+            module.screen_display('Accept ' + message + '?')
             start_time = time.time()
             while time.time() - start_time < 5:  # Keep active for 5 seconds
                 if switch_select.value() == 0:
@@ -57,6 +57,10 @@ def receive():
             
         elif isinstance(message, list):  #Received a sequence
             module.display_sequence(message)
+            checked = True
+        
+        elif message == 'Clear':
+            module.reset()
             
         else:   #received a number
             if module.board_name() == 'Music' and module.status == 'Coder':
@@ -110,21 +114,12 @@ while True:
                 module.add_to_sequence(num)
                 module.count += 1
                 checked = True
-        if module.count > 0:
-            while module.board_rssi > -50:
-                if module.screen_message != 'Send?':
-                    in_range = True
-                    module.screen_display(None)
-                    module.screen_display('Send?')
-            if in_range:
-                module.screen_display(None)
-                in_range = False
             
-    elif module.status == 'Player' and len(module.sequence) > 0 and len(module.player_sequence) < len(module.sequence):
+    elif 'Player' in module.status and len(module.sequence) > 0 and len(module.player_sequence) < len(module.sequence):
         if not checked and num != None:
             matches = module.check_buffer(num)
             checked = True
             if matches:
                 module.send(module.board_mac, module.player_sequence)
 
-    time.sleep(2)
+    time.sleep(0.5)

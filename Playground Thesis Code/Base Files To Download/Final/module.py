@@ -11,7 +11,7 @@ from machine import Pin, SoftI2C, PWM, ADC
 #Define module class
 class Module:
     def __init__(self, name = 'Lion'): #change to module animal
-        self.status = 'Searching'
+        self.status = 'Ready'
         self.last_status = None
         self.board_mac = None
         self.board_rssi = None
@@ -68,11 +68,16 @@ class Module:
         return batterycharge
     
     def checkstatus(self,p):
-        if self.screen_message == None and self.status != self.last_status:
-            self.screen_display(self.status)
         if self.board_mac != None:
             self.networking.aen.ping(self.board_mac)
             self.board_rssi = self.networking.aen.rssi()[self.board_mac][0]
+        if self.count > 0 and self.status == 'Coder' and self.board_rssi > -50:
+            if self.screen_message != 'Send?':
+                self.screen_display(None)
+                self.screen_display('Send?')
+        elif self.screen_message != self.status:
+            self.screen_display(None)
+            self.screen_display(self.status)
             
     def board_name(self):
         return self.networking.aen.peer_name(self.board_mac)
@@ -148,10 +153,23 @@ class Module:
         self.screen_display(None)
         self.clear_display()
         self.sequence = []
+        self.status = status
         if status == 'Coder':
-            self.status = status
             self.count = 0
         elif 'Player' in status:
-            self.status = 'Player'
             self.player_sequence = []
         self.send(self.board_mac, status)
+    
+    def reset(self):
+        self.board_mac = None
+        self.screen_display(None)
+        self.clear_display()
+        self.status = 'Ready'
+        self.last_status = None
+        self.board_rssi = None
+        self.count = 0
+        self.sequence = []
+        self.player_sequence = []
+        self.received_message = None
+        self.last_message = None
+        self.complete = False

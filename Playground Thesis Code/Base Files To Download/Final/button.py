@@ -20,8 +20,8 @@ class Splat:
         4:(0,255,0), #green
         5:(0,255,255), #cyan
         6:(0,0,255), #blue
-        7:(100,0,190), #purple
-        8:(255,70,200), #pink
+        7:(50,0,255), #purple
+        8:(150,70,200), #pink
         }
         
         #Note dictionary
