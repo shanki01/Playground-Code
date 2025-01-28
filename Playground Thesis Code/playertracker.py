@@ -1,4 +1,4 @@
-from machine import Pin
+from machine import Pin, Timer
 import neopixel
 
 colors = {
@@ -44,6 +44,68 @@ class PlayerTracker:
         self.np = neopixel.NeoPixel(Pin(pin), self.total_leds)
         self.clear_all()
         self.COLOR_MAP = self.generate_color_map()
+        
+        self.timer = Timer(2)  # Initialize timer for animations
+        self.current_animation = None  # Track current animation state
+        
+    def start_countdown(self, row_index: int, total_time_ms: int, color=(255, 255, 0)):
+        """
+        Start a countdown animation on a row of NeoPixels.
+        
+        Args:
+            row_index: Row to animate (4 for coder, 0-3 for players)
+            total_time_ms: Total time for countdown in milliseconds
+            color: Color for the countdown pixels
+        """
+        if row_index < 0 or row_index >= self.num_rows:
+            print(f"Invalid row index: {row_index}")
+            return
+
+        # Calculate timing
+        tick_time = total_time_ms // (self.row_length+1)  # Time per pixel
+        
+        # Set up animation state
+        self.current_animation = {
+            'row_start': (row_index) * (self.row_length + self.row_skip) + self.init_skip,
+            'pixels_left': self.row_length,
+            'color': color,
+            'row_index': row_index
+        }
+
+        # Light up full row initially
+        row_start = self.current_animation['row_start']
+        row_end = row_start+self.row_length 
+        for i in range(self.row_length):
+            self.np[row_start + i] = color
+        self.np.write()
+
+        # Start timer for animation ticks
+        def animation_tick(t):
+            if self.current_animation is None:
+                t.deinit()
+                return
+                
+            if self.current_animation['pixels_left'] > 0:
+                # Turn off next pixel
+                pixel_index = (self.row_length - self.current_animation['pixels_left'])
+                self.np[self.current_animation['row_start'] + self.row_length - pixel_index] = (0, 0, 0)
+                self.np.write()
+                self.current_animation['pixels_left'] -= 1
+            else:
+                # Animation complete
+                t.deinit()
+                self.current_animation = None
+                self.clear_player_progress(row_index)  # Ensure row is clear
+
+        self.timer.init(period=tick_time, mode=Timer.PERIODIC, callback=animation_tick)
+
+    def stop_countdown(self):
+        """Stop any current countdown animation."""
+        if self.current_animation:
+            self.timer.deinit()
+            # Clear the animated row
+            self.clear_player_progress(self.current_animation['row_index'])
+            self.current_animation = None
 
     def set_button_led(self, position, button_state):
         """
@@ -140,7 +202,7 @@ class PlayerTracker:
 
         :param player_index: Index of the player (0 to 4).
         """
-        if player_index < 0 or player_index >= (self.num_rows - 1):
+        if player_index < 0 or player_index > (self.num_rows - 1):
             print(f"Invalid player index: {player_index}. Must be between 0 and 4.")
             return
 

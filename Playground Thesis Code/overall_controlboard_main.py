@@ -37,6 +37,7 @@ networking.name = 'Control Board'
 game_state = GameState(coder_mac=None)
 player_tracker = PlayerTracker(pin=NEOPIXEL_PIN)
 
+
 # --- MAX7219 Setup ---
 spi = SPI(1, baudrate=10000000, sck=Pin(SPI_SCK_PIN), mosi=Pin(SPI_MOSI_PIN))
 cs = Pin(MAX7219_CS_PIN, Pin.OUT)
@@ -81,9 +82,10 @@ def clear_invitation_and_display(timer):
     if current_invitation:
         if current_invitation.type == "Coder":
             player_tracker.indicate_request(4, (0, 0, 0))
+            player_tracker.stop_countdown()
         elif current_invitation.type == "Player":
             player_tracker.indicate_request(current_invitation.position-1, (0, 0, 0))
-            player_tracker.set_button_led(current_invitation.position, 'connected')
+            player_tracker.stop_countdown()
         current_invitation = None
         print("Invitation expired")
 
@@ -169,6 +171,7 @@ def add_coder_handler(pin):
             for position, player_data in game_state.players.items():
                 if player_data["mac"]:  # if there's a player at this position
                     networking.aen.send(player_data["mac"], "Clear")
+                player_tracker.set_button_led(position-1, 'unassigned')
             game_state.reset_game()
             max_display.fill(0)
             max_display.text("NEW GAME",0,0,1)
@@ -184,8 +187,10 @@ def add_coder_handler(pin):
             max_display.text("NEW GAME",0,0,1)
             max_display.show()
             #player_tracker.clear_all()
-            player_tracker.indicate_request(4, color=(0, 0, 255))
+            
+            #player_tracker.indicate_request(4, color=(0, 0, 255))
             send_to_close_modules('Coder', -60)
+            player_tracker.start_countdown(4, 6000, (0,0,255))
         else:
             print("Invitation already pending")
     else:
@@ -208,6 +213,7 @@ def add_player_handler(pin, player_number):
             for position, player_data in game_state.players.items(): # Remove all players
                 if player_data["mac"]:  # if there's a player at this position
                     networking.aen.send(player_data["mac"], "Clear")
+                player_tracker.set_button_led(position-1, 'unassigned')
             game_state.reset_game()
             max_display.fill(0)
             max_display.text("NEW GAME",0,0,1)
@@ -220,8 +226,10 @@ def add_player_handler(pin, player_number):
         if game_state.players[player_number]["mac"] is None:
             if start_invitation("Player", player_number):
                 print(f"Inviting Player", player_number, "...")
-                player_tracker.indicate_request(player_number-1, color=(255, 0, 0))
+                #player_tracker.indicate_request(player_number-1, color=(255, 0, 0))
+                
                 send_to_close_modules('Player ' + str(player_number), -60)
+                player_tracker.start_countdown(player_number-1, 6000, (0,0,255))
             else:
                 print("Invitation already pending")
         else:
@@ -292,6 +300,7 @@ def on_receive_callback():
                 if game_state.add_player(mac, position):
                     if len(game_state.sequence) > 0:
                         networking.aen.send(mac, game_state.sequence)
+                    player_tracker.stop_countdown()
                     player_tracker.indicate_request(position-1, (0,0,0))
                     print(f"Player confirmed: {mac}")
                     player_tracker.set_button_led(position, "connected")
@@ -344,6 +353,7 @@ def on_receive_callback():
                         for position, player_data in game_state.players.items():
                             if player_data["mac"]:  # if there's a player at this position
                                 networking.aen.send(player_data["mac"], "Clear")
+                            player_tracker.set_button_led(position-1, 'unassigned')
                         game_state.reset_game()
                         max_display.fill(0)
                         max_display.text("NEW GAME",0,0,1)
