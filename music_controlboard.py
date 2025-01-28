@@ -10,7 +10,7 @@ import network
 import espnow
 from networking import Networking
 import ustruct
-import gc
+
 
 
 # Pin definitions for XIAO ESP32-C6
@@ -90,6 +90,79 @@ TEMPOS = {
     'fast': {'delay': 250, 'file_suffix': '_fast'}
 }
 
+
+# --- ESP-NOW Setup ---
+networking = Networking(True, False) #First bool is for network info messages, second for network debug messages
+broadcast_mac = b'\xff\xff\xff\xff\xff\xff'
+networking.ap._ap.active(False)
+networking.aen.add_peer(broadcast_mac, "All")
+networking.aen.ping(broadcast_mac)
+networking.name = 'Music'
+
+# -- Buttons --
+
+# Initialize Neopixels
+np = neopixel.NeoPixel(Pin(NEOPIXEL_PIN), TOTAL_LEDS)
+
+            
+# Initialize buttons with pull-up
+coder_button = Pin(CODER_BUTTON_PIN, Pin.IN, Pin.PULL_UP)
+play_button = Pin(PLAY_BUTTON_PIN, Pin.IN, Pin.PULL_UP)
+style_button = Pin(STYLE_BUTTON_PIN, Pin.IN, Pin.PULL_UP)
+            
+
+
+
+# Initialize I2S with error handling
+# I2S Setup Function with Variable Rate
+def setup_i2s(sample_rate, bit_depth,BUFFER_SIZE = 1024):
+    i2s = I2S(
+        0,
+        sck=Pin(20),   # Serial Clock BCLK D9
+        ws=Pin(18),    # Word Select / LR Clock D10
+        sd=Pin(19),    # Serial Data
+        mode=I2S.TX,
+        bits=bit_depth,
+        format=I2S.MONO,
+        rate=sample_rate,
+        ibuf=BUFFER_SIZE
+    )
+    return i2s
+
+# Helper function to parse the .wav header and extract audio parameters
+def parse_wav_header(file):
+    file.seek(0)  # Ensure we're at the start of the file
+    header = file.read(44)  # Standard .wav header size
+    sample_rate = ustruct.unpack('<I', header[24:28])[0]
+    bit_depth = ustruct.unpack('<H', header[34:36])[0]
+    return sample_rate, bit_depth
+
+
+
+def play_sound(path):
+        # Open the .wav file from the SD card
+    with open(path, "rb") as wav_file:
+        sample_rate, bit_depth = parse_wav_header(wav_file)
+        print(sample_rate, bit_depth)
+        i2s = setup_i2s(sample_rate, bit_depth)
+
+        # Skip the header and begin reading audio data
+        wav_file.seek(44)  # Start of PCM data after 44-byte header
+
+        # Buffer to hold PCM data read from the file
+        buffer = bytearray(1024)
+        
+        while True:
+            try:
+                num_read = wav_file.readinto(buffer)
+                if num_read == 0:
+                    break  # End of file
+                i2s.write(buffer[:num_read])  # Write to I2S in chunks
+            except KeyboardInterrupt:
+                print("CTRL C pressed")
+                
+
+
 class MusicBoard:
     """
     Main controller class for the musical sequencer and display system.
@@ -112,11 +185,17 @@ class MusicBoard:
         self.debug = debug
         self.debug_print("Initializing MusicBoard Game...")
         
-        self._init_memory_check()
-        self._init_hardware()
+        
+        self.np = np
+
+            
+        # Initialize buttons with pull-up
+        self.coder_button = coder_button
+        self.play_button = play_button 
+        self.style_button = style_button
         self._init_state()
         self._init_timers()
-        self._init_networking()
+        self.networking = networking
         
         # Initialize game state
         self.game_state = "READY"  # States: READY, ACTIVE
@@ -129,47 +208,7 @@ class MusicBoard:
         self.debug_print("Game initialized and ready.")
 
 
-    def _init_memory_check(self):
-        """
-        Perform initial memory check and garbage collection.
         
-        Raises:
-            MemoryError: If available memory is below minimum threshold
-        """
-        gc.collect()
-        min_memory = 30000  # Minimum required free memory
-        if gc.mem_free() < min_memory:
-            raise MemoryError("Insufficient memory for operation")
-
-    def _init_hardware(self):
-        """
-        Initialize hardware components including Neopixels, buttons, and I2S.
-        
-        Sets up GPIO pins and configures hardware interfaces.
-        Allows partial operation if audio initialization fails.
-        
-        Raises:
-            RuntimeError: If critical hardware initialization fails
-        """
-        try:
-            # Initialize Neopixels
-            self.np = neopixel.NeoPixel(Pin(NEOPIXEL_PIN), TOTAL_LEDS)
-            self.clear_display()
-            
-            # Initialize buttons with pull-up
-            self.coder_button = Pin(CODER_BUTTON_PIN, Pin.IN, Pin.PULL_UP)
-            self.play_button = Pin(PLAY_BUTTON_PIN, Pin.IN, Pin.PULL_UP)
-            self.style_button = Pin(STYLE_BUTTON_PIN, Pin.IN, Pin.PULL_UP)
-            
-            # Initialize I2S with error handling
-            try:
-                self.i2s = self._setup_i2s(44100, 16, BUFFER_SIZE)
-            except Exception as e:
-                self.debug_print(f"I2S initialization failed: {e}")
-                self.i2s = None  # Allow operation without audio
-                
-        except Exception as e:
-            raise RuntimeError(f"Hardware initialization failed: {e}")
 
     def _init_state(self):
         """
@@ -206,70 +245,17 @@ class MusicBoard:
         """
         try:
             self.play_timer = Timer(0)
-            self.animation_timer = Timer(1)
-            self.button_animation_timer = Timer(2)
+            #self.animation_timer = Timer(1)
+            #self.button_animation_timer = Timer(2)
         except Exception as e:
             self.debug_print(f"Timer initialization failed: {e}")
             self.error_state = True
 
-    def _init_networking(self):
-        """
-        Initialize networking and ESP-NOW communication.
-        
-        Sets up:
-        - ESP-NOW protocol
-        - Broadcast address
-        - Network callbacks
-        - Button interrupt handlers
-        
-        Sets error_state if initialization fails
-        """
-        try:
-            self.networking = Networking(True, False)
-            self.networking.ap._ap.active(False)
-            self.broadcast_mac = b'\xff\xff\xff\xff\xff\xff'
-            self.networking.aen.add_peer(self.broadcast_mac, "All")
-            self.networking.name = 'Music'
-            
-            # Setup network callback
-            self.networking.aen.irq(self._network_callback)
-            
-            # Setup button interrupts with error handling
-            try:
-                self.coder_button.irq(trigger=Pin.IRQ_FALLING, handler=self._coder_button_handler)
-                self.play_button.irq(trigger=Pin.IRQ_FALLING, handler=self._play_button_handler)
-                self.style_button.irq(trigger=Pin.IRQ_FALLING, handler=self._style_button_handler)
-            except Exception as e:
-                self.debug_print(f"Button interrupt setup failed: {e}")
-                self.error_state = True
+    
                 
-        except Exception as e:
-            self.debug_print(f"Networking initialization failed: {e}")
-            self.error_state = True
-
-    def _setup_i2s(self, sample_rate, bit_depth, buffer_size=1024):
-        """
-        Initialize I2S with given parameters.
         
-        Args:
-            sample_rate (int): Audio sample rate (e.g., 44100)
-            bit_depth (int): Sample bit depth (e.g., 16)
-            buffer_size (int): I2S buffer size
-            
-        Returns:
-            I2S: Configured I2S interface
-        """
-        return I2S(
-            0,
-            sck=Pin(I2S_SCK_PIN),
-            ws=Pin(I2S_WS_PIN),
-            sd=Pin(I2S_SD_PIN),
-            mode=I2S.TX,
-            bits=bit_depth,
-            format=I2S.MONO,
-            rate=sample_rate,
-            ibuf=buffer_size
-        )
+
+    
 
     def clear_display(self):
         """Clear all LEDs in the display."""
@@ -286,10 +272,6 @@ class MusicBoard:
         if self.debug:
             print(f"[DEBUG] {message}")
 
-    def _print_memory(self):
-        """Print current memory usage after garbage collection."""
-        gc.collect()
-        self.debug_print(f"Free memory: {gc.mem_free()} bytes")
 
     def _get_grid_index(self, col, row):
         """
@@ -331,36 +313,16 @@ class MusicBoard:
         
         Handles I2S errors and attempts recovery if playback fails
         """
-        if self.i2s is None:
-            self.debug_print("Audio subsystem not available")
-            return
+       
             
         suffix = TEMPOS[self.current_style]['file_suffix']
         filename = f"note{note_number}{suffix}.wav"
         
-        try:
-            with open(filename, "rb") as wav_file:
-                self.debug_print(f"Playing {filename}")
-                sample_rate, bit_depth = self._parse_wav_header(wav_file)
-                wav_file.seek(44)
+        
+        with open(filename, "rb") as wav_file:
+            play_sound(wav_file)
+            self.debug_print(f"Playing {filename}")
                 
-                buffer = bytearray(BUFFER_SIZE)
-                while True:
-                    num_read = wav_file.readinto(buffer)
-                    if num_read == 0:
-                        break
-                    try:
-                        self.i2s.write(buffer[:num_read])
-                    except Exception as e:
-                        self.debug_print(f"I2S write error: {e}")
-                        # Try to reinitialize I2S
-                        self.i2s = self._setup_i2s(44100, 16, BUFFER_SIZE)
-                        break
-                        
-        except OSError as e:
-            self.debug_print(f"File error with {filename}: {e}")
-        except Exception as e:
-            self.debug_print(f"Error playing {filename}: {e}")
 
     def _parse_wav_header(self, file):
         """
@@ -540,7 +502,7 @@ class MusicBoard:
             self.debug_print("Coder button pressed - transitioning to INVITING")
             self.game_state = 'INVITING'
             self.invitation_active = True
-            self.networking.aen.send(self.broadcast_mac, 'Coder')
+            self.networking.aen.send(broadcast_mac, 'Coder')
             self._update_button_leds()
             self._start_invitation_timer()
             self.debug_print("Invitation sequence complete")
@@ -557,24 +519,6 @@ class MusicBoard:
             self.game_state = 'PLAYING'
             self._start_playback()
         self._update_button_leds()
-
-    def _network_callback(self):
-        """Handle network messages with state transitions."""
-        for mac, msg, rtime in self.networking.aen.return_messages():
-            print('received', msg, type(msg))
-            
-            if msg == 'Coder' and self.game_state == 'INVITING':
-                self.coders_list.add(mac)
-                self.current_coder = mac
-                self.game_state = 'WAITING'
-                self._update_button_leds()
-                
-            elif isinstance(msg, list) and len(msg) <= 8:
-                if mac in self.coders_list and all(1 <= x <= 8 for x in msg):
-                    self.current_sequence = msg
-                    self.game_state = 'PLAYING'
-                    self.display_sequence(msg)
-                    self._start_playback()
 
     def _style_button_handler(self, pin):
         """Handle style button press to change tempo."""
@@ -628,33 +572,42 @@ class MusicBoard:
     def run(self):
         """Main game loop with simplified state handling."""
         print(f"Music Board running in {self.game_state} state...")
-        last_memory_check = time.ticks_ms()
         
-        while True:
-            try:
-                # Periodic memory check
-                if time.ticks_diff(time.ticks_ms(), last_memory_check) > 10000:
-                    self._print_memory()
-                    last_memory_check = time.ticks_ms()
-                
-                if self.game_state == 'ERROR':
-                    self.clear_display()
-                    for i in range(64, 67):
-                        self.np[i] = (255, 0, 0)  # Red
-                    self.np.write()
-                    time.sleep(1)
-                    continue
-                
-                time.sleep(0.1)
-                
-            except Exception as e:
-                self.debug_print(f"Main loop error: {e}")
-                self.game_state = 'ERROR'
+ 
+ 
+ 
+board = MusicBoard(debug=True)
 
-# Usage
+
+coder_button.irq(trigger=Pin.IRQ_FALLING, handler=board._coder_button_handler)
+play_button.irq(trigger=Pin.IRQ_FALLING, handler=board._play_button_handler)
+style_button.irq(trigger=Pin.IRQ_FALLING, handler=board._style_button_handler)
+
+def network_callback(self):
+        """Handle network messages with state transitions."""
+        for mac, msg, rtime in networking.aen.return_messages():
+            print('received', msg, type(msg))
+            
+            if msg == 'Coder' and board.game_state == 'INVITING':
+                board.coders_list.add(mac)
+                board.current_coder = mac
+                board.game_state = 'WAITING'
+                board._update_button_leds()
+                
+            elif isinstance(msg, list) and len(msg) <= 8:
+                if mac in board.coders_list and all(1 <= x <= 8 for x in msg):
+                    board.current_sequence = msg
+                    board.game_state = 'PLAYING'
+                    board.display_sequence(msg)
+                    board._start_playback()
+
+networking.aen.irq(network_callback)
+
+# --- Main Loop ---
+def main():
+    print("Game controller initialized. Waiting for input...")
+    while True:
+        time.sleep(0.5)
+
 if __name__ == "__main__":
-    try:
-        board = MusicBoard(debug=True)
-        board.run()
-    except Exception as e:
-        print(f"Critical error: {e}")
+    main()
