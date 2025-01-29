@@ -9,7 +9,8 @@ class GameState:
             coder_mac: MAC address of coder device
             sequence: Optional initial game sequence
         """
-        self.coder_mac = coder_mac
+        self.coder_mac = coder_mac # THE ACTIVE CODER
+        self.coders_list = {}
         self.sequence = sequence if sequence else []
         # Initialize player positions with None values
         self.players = {
@@ -18,6 +19,7 @@ class GameState:
             3: {"mac": None, "progress": 0, "last_connection": None},
             4: {"mac": None, "progress": 0, "last_connection": None}
         }
+        self.state = "SETUP" # "ACTIVE" "COMPLETED"
         
     def set_sequence(self, sequence):
         """
@@ -35,6 +37,21 @@ class GameState:
         else:
             raise ValueError("Sequence must be a list of numbers between 1 and 10.")
     
+    
+    
+    def add_coder_to_list(self, mac_address):
+        
+        position = self.get_player_position(mac_address)
+        if position is not None:
+            self.remove_player(position)
+        self.coders_list[mac_address] = time.ticks_ms()
+        
+    def remove_coder_from_list(self, mac_address):
+        if mac_address in self.coders_list:
+            self.coders_list.pop(mac_address)
+            
+        
+    
     def add_player(self, mac_address, position): # added position
         """
         Add a player at a specific position.
@@ -46,6 +63,7 @@ class GameState:
         Returns:
             bool: True if player was added, False if position is occupied
         """
+        
         if position not in self.players:
             print(f"Invalid position: {position}. Must be between 1 and 4.")
             return False
@@ -59,11 +77,37 @@ class GameState:
             "progress": 0,
             "last_connection": time.ticks_ms()
         }
+        self.remove_coder_from_list(mac_address) 
         print(f"Player {mac_address} added at position {position}")
         return True
-
     
-     def remove_player(self, position): # now by position instead of mac
+    def player_count(self):
+        count = 0
+        for position, player_data in self.players.items():
+              if self.players[position]["mac"] is not None:
+                  count = count + 1
+        return count               
+                    
+
+    def remove_player_by_mac(self, mac): # now by position instead of mac
+        """
+        Remove a player from a specific position.
+        
+        Args:
+            position: Position number (1-4)
+        """
+        position = self.get_player_position(mac)
+        if position is not None:
+            self.players[position] = {
+                "mac": None, 
+                "progress": 0, 
+                "last_connection": None
+            }
+            print(f"Player at position {position} removed.")
+        else:
+            print(f"Not player: {mac}") 
+    
+    def remove_player(self, position): # now by position instead of mac
         """
         Remove a player from a specific position.
         
@@ -80,7 +124,7 @@ class GameState:
         else:
             print(f"Invalid position: {position}")            
             
-     def update_progress(self, mac_address, step):
+    def update_progress(self, mac_address, step):
         """
         Update progress for a player with given MAC address.
         
@@ -91,7 +135,7 @@ class GameState:
         for position, player in self.players.items():
             if player["mac"] == mac_address:
                 player["progress"] = min(step, 8)
-                player["last_connection"] = time()
+                player["last_connection"] = time.ticks_ms()
                 print(f"Player at position {position} progress updated to step {step}.")
                 return
         print(f"Player {mac_address} not found.")
@@ -161,19 +205,19 @@ class GameState:
         self.sequence = []
         print("Game has been reset. Players removed.")
 
-  def to_dict(self):
-        """
-        Convert game state to dictionary for saving.
+    def to_dict(self):
+            """
+            Convert game state to dictionary for saving.
+            
+            Returns:
+                dict: Game state data
+            """
+            return {
+                "coder_mac": self.coder_mac,
+                "sequence": self.sequence,
+                "players": self.players
+            }
         
-        Returns:
-            dict: Game state data
-        """
-        return {
-            "coder_mac": self.coder_mac,
-            "sequence": self.sequence,
-            "players": self.players
-        }
-    
     def from_dict(self, data):
         """
         Restore game state from dictionary.
@@ -184,10 +228,10 @@ class GameState:
         self.coder_mac = data.get("coder_mac")
         self.sequence = data.get("sequence", [])
         self.players = data.get("players", {})
-        
-#     def reset_player_activity(self, mac_address):
-#         """Reset the activity timestamp for a player."""
-#         self.players[mac_address] = time.time()
+            
+    #     def reset_player_activity(self, mac_address):
+    #         """Reset the activity timestamp for a player."""
+    #         self.players[mac_address] = time.time()
 
     def remove_inactive_players(self, timeout=600000):
         """
@@ -202,7 +246,7 @@ class GameState:
         for position, player in self.players.items():
             if time.ticks_diff(player["last_connection"], current_time) > timeout:
                 self.remove_player(position)
-                
+                    
 
 # Example Usage
 if __name__ == "__main__":
