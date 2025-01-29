@@ -3,7 +3,7 @@ import struct
 from machine import Pin, SoftI2C, PWM, ADC
 from splat import Splat
 
-s = Splat('1')
+s = Splat('3')
 s.set_color()
 
 def callback(pin):

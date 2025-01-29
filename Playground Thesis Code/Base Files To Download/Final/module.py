@@ -10,10 +10,16 @@ from machine import Pin, SoftI2C, PWM, ADC
 
 #Define module class
 class Module:
-    def __init__(self, name = 'Lion'): #change to module animal
-        self.status = 'Ready'
+    def __init__(self, name = 'Lion', board = 'Music'): #change to module animal
         self.last_status = None
-        self.board_mac = None
+        if board == 'Music':
+            self.board_mac = b'\x8c\xbf\xea\xcb\xb4\xd0'
+            self.status = 'Coder'
+        elif board == 'Control Board':
+            self.board_mac = b'4\x85\x18\x00=\xcc'
+            self.status = 'Ready'
+        else:
+            self.board_mac = None
         self.board_rssi = None
         self.count = 0
         self.sequence = []
@@ -25,8 +31,20 @@ class Module:
         self.motor = Pin(2, Pin.OUT)
         self.sens = sensors.SENSORS()
         
+        #oled screen
+        self.i2c = SoftI2C(scl = Pin(7), sda = Pin(6))
+        self.oled = icons.SSD1306_SMART(128, 64, self.i2c)
+        self.clear_oled()
+
+        #Led Matrix setup
+        self.matrix = ledmatrix.LEDMATRIX(self.i2c)
+        self.sequencer = LEDSequencer(self.matrix)
+        self.buffer = self.sequencer.buffer
+        self.clear_display()
+        
         #Color dictionary
         self.c = {
+        0: 'black',
         1:'red',
         2:'orange',
         3:'yellow',
@@ -44,17 +62,6 @@ class Module:
         self.networking.aen.ping(self.broadcast_mac)
         self.networking.name = name
         
-        #oled screen
-        self.i2c = SoftI2C(scl = Pin(7), sda = Pin(6))
-        self.oled = icons.SSD1306_SMART(128, 64, self.i2c)
-        self.clear_oled()
-
-        #Led Matrix setup
-        self.matrix = ledmatrix.LEDMATRIX(self.i2c)
-        self.sequencer = LEDSequencer(self.matrix)
-        self.buffer = self.sequencer.buffer
-        self.clear_display()
-        
     def clear_display(self):
         self.sequencer.clear_display()
         
@@ -70,8 +77,12 @@ class Module:
     def checkstatus(self,p):
         if self.board_mac != None:
             self.networking.aen.ping(self.board_mac)
-            self.board_rssi = self.networking.aen.rssi()[self.board_mac][0]
-        if self.count > 0 and self.status == 'Coder' and self.board_rssi > -50:
+            try:
+                self.board_rssi = self.networking.aen.rssi()[self.board_mac][0]
+                print(self.board_rssi)
+            except:
+                self.board_rssi = None
+        if self.count > 0 and self.status == 'Coder' and self.board_rssi != None and self.board_rssi > -70:
             if self.screen_message != 'Send?':
                 self.screen_display(None)
                 self.screen_display('Send?')
@@ -127,8 +138,13 @@ class Module:
     def add_to_sequence(self,num):
         self.sequence.append(num)
         color = self.c[num]
-        self.sequencer.display_number(num,color)
+        if self.board_name() == 'Control Board':
+            self.sequencer.display_number(num,color)
         self.sequencer.display_color_pixel(color,7-(len(self.sequence)-1),7)
+        
+    def display_number(self,num):
+        color = self.c[num]
+        self.sequencer.display_number(num,color)
     
     def check_buffer(self,num):
         index = len(self.player_sequence)

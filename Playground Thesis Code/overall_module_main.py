@@ -9,7 +9,7 @@ import sensors
 from module import Module
 from machine import Pin, SoftI2C, PWM, ADC, Timer
 
-module = Module('Lion')
+module = Module('Lion', 'Music')
 num = None
 last_num = None
 checked = False
@@ -19,53 +19,54 @@ def receive():
     global num, last_num, checked
     for mac, message, rtime in module.networking.aen.return_messages():
         module.received_message = message
-        
-        if message == 'Coder':
-            switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
-            module.screen_display(None)
-            module.screen_display('Accept Coder?')
-            start_time = time.time()
-            while time.time() - start_time < 5:  # Keep active for 3 seconds
-                if switch_select.value() == 0:
-                    module.switch_status('Coder',mac)
-                    print('Coder Accepted')
-                    num = None
-                    last_num = None
+        if mac == module.board_mac:
+            if message == 'Coder':
+                switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
+                module.screen_display(None)
+                module.screen_display('Accept Coder?')
+                start_time = time.time()
+                while time.time() - start_time < 5:  # Keep active for 3 seconds
+                    if switch_select.value() == 0:
+                        module.switch_status('Coder',mac)
+                        print('Coder Accepted')
+                        num = None
+                        last_num = None
+                        time.sleep(0.05)
+                        break
                     time.sleep(0.05)
-                    break
-                time.sleep(0.05)
-            module.screen_display(None)
-            if module.status == 'Coder':
-                switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
+                module.screen_display(None)
+                if module.status == 'Coder':
+                    switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
+                
+            elif 'Player' in message:
+                switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
+                module.screen_display(None)
+                module.screen_display('Accept ' + message + '?')
+                start_time = time.time()
+                while time.time() - start_time < 5:  # Keep active for 5 seconds
+                    if switch_select.value() == 0:
+                        module.switch_status(message, mac)
+                        print('Player Accepted')
+                        time.sleep(0.5)
+                        num = None
+                        break
+                    time.sleep(0.05)
+                module.screen_display(None)
+                if module.status == 'Coder':
+                    switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
+                
+            elif isinstance(message, list):  #Received a sequence
+                module.display_sequence(message)
+                checked = True
             
-        elif 'Player' in message:
-            switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
-            module.screen_display(None)
-            module.screen_display('Accept ' + message + '?')
-            start_time = time.time()
-            while time.time() - start_time < 5:  # Keep active for 5 seconds
-                if switch_select.value() == 0:
-                    module.switch_status(message, mac)
-                    print('Player Accepted')
-                    time.sleep(0.5)
-                    num = None
-                    break
-                time.sleep(0.05)
-            module.screen_display(None)
-            if module.status == 'Coder':
-                switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
-            
-        elif isinstance(message, list):  #Received a sequence
-            module.display_sequence(message)
-            checked = True
-        
-        elif message == 'Clear':
-            module.reset()
+            elif message == 'Clear':
+                module.reset()
             
         else:   #received a number
             if module.board_name() == 'Music' and module.status == 'Coder':
                 module.screen_display(None)
                 module.screen_display('Add Note?')
+                module.display_number(int(message))
                 switch_select.irq(trigger=Pin.IRQ_FALLING, handler=None)
                 start_time = time.time()
                 while time.time() - start_time < 3:  # Keep active for 3 seconds
@@ -77,6 +78,7 @@ def receive():
                         checked = False
                         break
                 module.screen_display(None)
+                module.display_number(0)
                 if module.status == 'Coder':
                     switch_select.irq(trigger=Pin.IRQ_FALLING, handler=select)
             else:
@@ -86,7 +88,7 @@ def receive():
 def select(pin):
     global num, last_num, sent
     if module.status == 'Coder':
-        if module.board_rssi > -50:
+        if module.board_rssi > -70:
             module.send(module.board_mac, module.sequence)
             module.screen_display(None)
             module.screen_display('Sent')
@@ -123,3 +125,4 @@ while True:
                 module.send(module.board_mac, module.player_sequence)
 
     time.sleep(0.5)
+

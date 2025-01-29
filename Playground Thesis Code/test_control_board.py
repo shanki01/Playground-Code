@@ -20,7 +20,7 @@ networking = Networking(True, False) #First bool is for network info messages, s
 broadcast_mac = b'\xff\xff\xff\xff\xff\xff'
 networking.aen.add_peer(broadcast_mac, "All")
 networking.aen.ping(broadcast_mac)
-networking.name = 'Control Board'
+networking.name = 'Music'
 
 # --- Initialize Classes ---
 game_state = GameState(coder_mac=None)
