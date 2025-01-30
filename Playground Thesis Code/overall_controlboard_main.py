@@ -10,14 +10,14 @@ from max7219 import Max7219
 import time
 
 # --- Pin Constants for XIAO ESP32-C3 ---
-CODER_BUTTON_PIN = 3          
-UNDO_BUTTON_PIN = 20
-RANDOM_BUTTON_PIN = 9
-PLAYER_BUTTON_PINS = [4, 5, 6, 7]  
-NEOPIXEL_PIN = 21       
-SPI_SCK_PIN = 8               
-SPI_MOSI_PIN = 10             
-MAX7219_CS_PIN = 2            
+CODER_BUTTON_PIN = 1 #3          
+UNDO_BUTTON_PIN = 17 #20
+RANDOM_BUTTON_PIN = 20 #9
+PLAYER_BUTTON_PINS = [2,21,22,23] #[4, 5, 6, 7]  
+NEOPIXEL_PIN = 16 #21       
+SPI_SCK_PIN = 19 #8               
+SPI_MOSI_PIN = 18 #10             
+MAX7219_CS_PIN = 0 #2          
 
 # --- Constants ---
 INACTIVITY_TIMEOUT = 600  # 10 minutes in seconds
@@ -57,7 +57,7 @@ player_buttons = [Pin(pin, Pin.IN, Pin.PULL_UP) for pin in PLAYER_BUTTON_PINS]
 
 # Global variables
 current_invitation = None
-invitation_timer = Timer(1)
+invitation_timer = Timer(0)
 
 class Invitation:
     def __init__(self, invite_type, position=None):
