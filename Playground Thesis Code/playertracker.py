@@ -128,7 +128,19 @@ class PlayerTracker:
                 print("setting button color", color, "at", led_index)
                 self.np[led_index] = color
                 self.np.write()
-            
+            elif len(button_state)==3:
+                try:
+                    base_index = self.total_leds - self.buttons  # Start of button section
+                    if position == 0:
+                        led_index = self.total_leds - 1  # Coder is last LED
+                    else:
+                        led_index = base_index + (4 - position)  # Players are reversed 4,3,2,1
+                    color = button_state
+                    print("setting button color", color, "at", led_index)
+                    self.np[led_index] = color
+                    self.np.write()
+                except:
+                    print("failed to set button color")
     
     def clear_all(self):
         """Clear all LEDs."""

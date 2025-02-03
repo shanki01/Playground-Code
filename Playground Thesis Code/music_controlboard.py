@@ -30,7 +30,7 @@ BUFFER_SIZE = 1024  # Adjustable based on available memory
 
 # Color mapping for notes (in GRB format)
 NOTE_COLORS = {
-    1: (200, 0, 0),    # Red for C (Middle C)
+    1: (100, 0, 0),    # Red for C (Middle C)
     2: (255, 127, 0),  # Orange for D
     3: (255, 255, 0),  # Yellow for E
     4: (0, 255, 0),    # Green for F
@@ -131,13 +131,20 @@ def setup_i2s(sample_rate, bit_depth,BUFFER_SIZE = 1024):
 
 # Helper function to parse the .wav header and extract audio parameters
 def parse_wav_header(file):
+    """
+        Parse WAV file header to extract audio parameters.
+        
+        Args:
+            file: Open file handle to WAV file
+            
+        Returns:
+            tuple: (sample_rate, bit_depth)
+    """
     file.seek(0)  # Ensure we're at the start of the file
     header = file.read(44)  # Standard .wav header size
     sample_rate = ustruct.unpack('<I', header[24:28])[0]
     bit_depth = ustruct.unpack('<H', header[34:36])[0]
     return sample_rate, bit_depth
-
-
 
 def play_sound(path):
         # Open the .wav file from the SD card
@@ -187,6 +194,9 @@ class MusicBoard:
         
         
         self.np = np
+        self.np.fill((0,0,0))
+        time.sleep_ms(10) 
+        self.np.write()
 
             
         # Initialize buttons with pull-up
@@ -206,6 +216,7 @@ class MusicBoard:
         
         # Display ready state
         self._show_ready_state()
+        self._update_button_leds()
         self.debug_print("Game initialized and ready.")
 
 
@@ -251,17 +262,14 @@ class MusicBoard:
         except Exception as e:
             self.debug_print(f"Timer initialization failed: {e}")
             self.error_state = True
-
-    
-                
         
 
     
 
-    def clear_display(self):
-        """Clear all LEDs in the display."""
-        self.np.fill((0, 0, 0))
-        self.np.write()
+    #def clear_display(self):
+       # """Clear all LEDs in the display."""
+        #self.np.fill((0, 0, 0))
+        #self.np.write()
 
     def debug_print(self, message):
         """
@@ -326,20 +334,7 @@ class MusicBoard:
         self.debug_print(f"Playing {filename}")
                 
 
-    def _parse_wav_header(self, file):
-        """
-        Parse WAV file header to extract audio parameters.
-        
-        Args:
-            file: Open file handle to WAV file
-            
-        Returns:
-            tuple: (sample_rate, bit_depth)
-        """
-        header = file.read(44)
-        sample_rate = ustruct.unpack('<I', header[24:28])[0]
-        bit_depth = ustruct.unpack('<H', header[34:36])[0]
-        return sample_rate, bit_depth
+  
 
     def _play_sequence_step(self, timer):
         """
@@ -368,16 +363,17 @@ class MusicBoard:
 
     def _update_button_leds(self):
         """Update button LEDs based on current state."""
-        brightness = self.button_brightness / 100
+        #brightness = self.button_brightness / 100
+        
         state_config = STATES[self.game_state]
         
         # Coder button (index 64)
         coder_color = BUTTON_STATES[state_config['coder_led']]
-        self.np[66] = tuple(int(c * brightness) for c in coder_color)
+        self.np[66] = coder_color
         
         # Play/Pause button (index 65)
         play_color = BUTTON_STATES[state_config['play_led']]
-        self.np[65] = tuple(int(c * brightness) for c in play_color)
+        self.np[65] = play_color
         
         # Style button (index 66)
         style_colors = {
@@ -385,15 +381,15 @@ class MusicBoard:
             'fast': (255, 0, 0),      # Red
             'slow': (0, 0, 255)       # Blue
         }
-        self.np[64] = tuple(int(c * brightness) for c in style_colors[self.current_style])
-        
+        self.np[64] = style_colors[self.current_style]
+        time.sleep_ms(10) 
         self.np.write()
         
 #     def _start_invitation_timer(self):
 #         """Start timer for coder invitation timeout."""
 #         def _timeout_handler(timer):
 #             self.debug_print("Invitation timer triggered")  # Add debug print
-#             if self.game_state == 'INVITING':
+#             if self.game_state == '':
 #                 self.debug_print("Resetting to READY state")
 #                 self.game_state = 'READY'
 #                 #self.invitation_active = False  # Also reset this flag
@@ -432,6 +428,7 @@ class MusicBoard:
         self.current_beat = -1
         self.display_sequence(self.current_sequence)  # Remove highlight
         self.game_state == 'PAUSED'
+        self._update_button_leds()
 
     def display_sequence(self, sequence, highlight_col=None):
         """
@@ -441,36 +438,46 @@ class MusicBoard:
             sequence (list): List of notes to display
             highlight_col (int, optional): Column to highlight
         """
-        try:
-            self.clear_display()
-            
-            for col, note in enumerate(sequence):
-                if note is not None and 1 <= note <= 8:
-                    led_index = self._get_grid_index(col, note - 1)
-                    if led_index is not None:
-                        color = NOTE_COLORS[note]
-                        if col == highlight_col:
-                            if note == 1:
-                                color=(255,0,0)
-                            #elif col%2 != 0:
-                             #   print(range(0-(8-note),note-(8-note)))
-                              #  for i in range(0,note):
-                               #     self.np[(col*8)+i] = color
-                            else: 
-                                print(range(8-note,8))
-                                for i in range(8-note,8):
-                                    self.np[(col*8+i)] = color
-                            
-                        self.np[led_index] = color
-            
-            self._update_button_leds()
-            self.np.write()
-            
-        except Exception as e:
-            self.debug_print(f"Display error: {e}")
-            self.error_state = True
+        for p in range(64):
+            self.np[p] = (0, 0, 0)
+        
+        for col, note in enumerate(sequence):
+            if note is not None and 1 <= note <= 8:
+                row = note-1 # 0 botton to top 7
+                            # col 0 left to right 7
+                led_index = self._get_grid_index(col, row)
+                
+                if led_index is not None:
+                    # draw notes of sequence
+                    color = NOTE_COLORS[note]
+                    
+                    
+                    if col == highlight_col:
+                        if note == 1:
+                            color=(255,10,5)
+                        #elif col%2 != 0:
+                         #   print(range(0-(8-note),note-(8-note)))
+                          #  for i in range(0,note):
+                           #     self.np[(col*8)+i] = color
+                        else:
+                            for fill_row in range(0,row):
+                                fill_index = self._get_grid_index(col, fill_row)
+                                if fill_index is not None:
+                                    self.np[fill_index] = color
+                            #print(range(8-note,8))
+                            #for i in range(8-note,8):
+                            #    self.np[(col*8+i)] = color
+                    self.np[led_index] = color
+                    
+                    
+                    
+        
+        
+        time.sleep_ms(10) 
+        self.np.write()
 
-    def _debounce(self, pin, delay_ms=50):
+
+    def _debounce(self, pin, delay_ms=100):
         """
         Debounce button input.
         
@@ -490,8 +497,8 @@ class MusicBoard:
 
     def _show_ready_state(self):
         """Display ready state pattern on LED grid."""
-        self.clear_display()
-        # Display "READY" pattern (could be a scrolling text or pattern)
+        self.np.fill((0, 0, 0))
+        
         for i in range(8):
             for j in range(8):
                 if (i + j) % 2 == 0:
@@ -499,7 +506,6 @@ class MusicBoard:
                     if led_index is not None:
                         self.np[led_index] = NOTE_COLORS[i+1]#(0, 0, 255)  # Blue checkerboard pattern
         self._update_button_leds()
-        self.np.write()
 
     def _coder_button_handler(self, pin):
         """Handle coder button with state transitions."""
@@ -527,10 +533,12 @@ class MusicBoard:
         #elif self.game_state == 'PAUSED' and
         if self.current_sequence and not self.game_state == 'PLAYING':
             self.game_state = 'PLAYING'
+            self._update_button_leds()
             print("Play Button")
             self._start_playback()
-        self._update_button_leds()
+        
         self.game_state = 'PAUSED'
+        self._update_button_leds()
 
     def _style_button_handler(self, pin):
         """Handle style button press to change tempo."""
@@ -567,7 +575,7 @@ class MusicBoard:
                 break
         self.display_sequence(self.current_sequence)  # Remove highlight
         self.game_state == 'PAUSED'
-        
+        board._update_button_leds()
         # Start button animation
         #self.button_animation_timer.init(period=50, mode=Timer.PERIODIC,
                                        #callback=self._animate_buttons)
@@ -581,10 +589,12 @@ class MusicBoard:
         Sets all button LEDs to red in error state
         """
         if self.error_state:
-            self.clear_display()
+            self.np.fill((0, 0, 0))
+            
             # Display error pattern
             for i in range(64, 67):
                 self.np[i] = (255, 0, 0)  # Red
+            time.sleep_ms(10) 
             self.np.write()
             self.debug_print("System in error state")
             return True
@@ -619,6 +629,7 @@ def network_callback():
                 #if mac in board.coders_list:
                 board.current_sequence = msg
                 board.game_state = 'PAUSED'
+                board._update_button_leds()
                 board.display_sequence(msg)
                 #board._start_playback()
 

@@ -89,7 +89,7 @@ def clear_invitation_and_display(timer):
         current_invitation = None
         print("Invitation expired")
 
-def start_invitation(invite_type, position=None, timeout = 7000):
+def start_invitation(invite_type, position=None, timeout = 8000):
     """
     Start a new invitation if none exists.
     
@@ -153,14 +153,19 @@ def button_detect_long_press(pin, duration=100, feedback=None):
     
     # Make sure button is held down for short duration (not noise)
     while time.ticks_diff(time.ticks_ms(),start)<duration:
-        time.sleep_ms(duration//10)      
-        if pin.value(): 
+        time.sleep_ms(10)      
+        if pin.value():
+            
             return False
         
+    if feedback is not None:
+        max_display.fill(0)
+        max_display.text(feedback,0,0,1)
+        max_display.show()
     while not pin.value(): #wait for release        
-        time.sleep_ms(duration//10)
+        time.sleep_ms(10)
         
-    time.sleep_ms(duration//10) # make sure release is finished
+    time.sleep_ms(50) # make sure release is finished
                                 # maybe remove when invitiation tracking works
     return True
     
@@ -240,9 +245,27 @@ def add_player_handler(pin, player_number):
 
 def undo_handler(pin):
     """Handler to recover the previous game state."""
-    if button_detect_long_press(pin):
-        print("Undoing last reset...")
-        backup_and_load_previous_game()
+    print("Reset??")
+    if button_detect_long_press(pin,duration=2000,feedback="RESET!"):
+        print("Reset Game...")
+        for position, player_data in game_state.players.items():
+            if player_data["mac"]:  # if there's a player at this position
+                networking.aen.send(player_data["mac"], "Clear")
+            player_tracker.set_button_led(position-1, 'unassigned')
+        game_state.reset_game()
+        invitation_timer.deinit()  # Cancel timeout timer
+        current_invitation = None  # Clear invitations        
+        max_display.fill(0)
+        max_display.text("NEW GAME",0,0,1)
+        max_display.show()
+        player_tracker.clear_all()
+        game_state.state = "SETUP"
+        print("CLEAR?")
+        time.sleep(.5)
+        #backup_and_load_previous_game()
+        
+    else:
+        print("Reset released early")
 
 def shuffle_handler(pin):
     """Handler to recover the previous game state."""
@@ -280,7 +303,8 @@ def on_receive_callback():
                 
                 game_state.add_coder_to_list(mac) # also removes from players
                 print(f"Coder list added: {mac}")
-                
+                num_coders = len(game_state.coders_list)
+                player_tracker.set_button_led(0, (0,0,int(12*min(num_coders,10)))) 
                 # max_display.fill(0)
                 # max_display.text("CODE",0,0,1)
                 # max_display.show()
@@ -312,7 +336,7 @@ def on_receive_callback():
 
         elif isinstance(msg, list):
             # Handle coder sequence
-            print("List received:", game_state.state)
+            print("List received, Game State:", game_state.state)
             if game_state.state == "ACTIVE":
                 
                 if game_state.get_player_position(mac) is not None: 
@@ -350,6 +374,7 @@ def on_receive_callback():
                     #if len(game_state.sequence) == 0:   #if no coder sequence before and players registered, send to registered players
                         # Send sequence to all registered players
                     if game_state.state == "COMPLETED":
+                        # Reset complete game
                         for position, player_data in game_state.players.items():
                             if player_data["mac"]:  # if there's a player at this position
                                 networking.aen.send(player_data["mac"], "Clear")
@@ -361,7 +386,8 @@ def on_receive_callback():
                         player_tracker.clear_all()
                         print("CLEAR?")
                         time.sleep(.5)
-                    else:    
+                    else:
+                        # Send sequence to existing players
                         for position, player_data in game_state.players.items():
                             if player_data["mac"]:  # if there's a player at this position
                                 networking.aen.send(player_data["mac"], sequence)
@@ -370,7 +396,7 @@ def on_receive_callback():
                     #print('saving game state')
                     player_tracker.reset_all_progress()
                     game_state.set_sequence(sequence)
-                    player_tracker.set_button_led(0, "connected")
+                    player_tracker.set_button_led(0, "connected") #coder button
                     player_tracker.display_coder_sequence(sequence)
                     max_display.fill(0)
                     max_display.draw_5x3_list(sequence)
