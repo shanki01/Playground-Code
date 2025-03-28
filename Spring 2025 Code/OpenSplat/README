@@ -1,0 +1,12 @@
+These files are courtesy of Unruly Lead Software Architect Shawn Wallace
+They originate from a Raspberry Pi experiment for automated Splat testing.
+The python scripts have a dependency on bluepy.btle, which, according to Shawn’s memory may have been Raspberry Pi-specific.
+So this is not likely to run on a mac as-is.
+The scripts center on controlling lights and sounds on splats.
+opensplatScan.py returns BLE addresses of the Splats.
+You need to plug in the address values found into the test code.
+
+Files
+opensplatlib.py
+opensplatScan.py
+opensplatTest.py
