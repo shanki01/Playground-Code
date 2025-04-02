@@ -1,0 +1,93 @@
+body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #ffffff;
+}
+
+.board-container {
+    position: relative;
+    width: 600px;
+    height: 600px;
+}
+
+.splat {
+    width: 100%;
+    height: 100%;
+}
+
+.led-control {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.led-control input[type="color"] {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+}
+
+.off-btn {
+    /*background: #ff4c4c;*/
+    /*color: white;*/
+    /*border: none;*/
+    /*padding: 2px 5px;*/
+    /*cursor: pointer;*/
+    /*font-size: 12px;*/
+}
+
+#all-off-btn {
+    /*margin-top: 20px;*/
+    /*padding: 10px 20px;*/
+    /*font-size: 16px;*/
+    /*cursor: pointer;*/
+}
+
+ .midi-controls {
+     display: flex;
+     flex-direction: column;
+     gap: 10px;
+     max-width: 300px;
+ }
+
+.form-row {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-row label {
+    text-align: right;
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    margin-left: 8px;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 250px;
+    padding: 10px;
+    border-radius: 4px;
+    background: #eee;
+    position: absolute;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+/*.tooltip .tooltiptext a {*/
+/*    color: #9cf;*/
+/*    text-decoration: underline;*/
+/*}*/
