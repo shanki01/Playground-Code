@@ -1,18 +1,55 @@
 body {
     font-family: sans-serif;
+    background: #ffffff;
+    margin: 0;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    line-height: 1.6; /* Improves vertical rhythm */
+}
+
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    max-width: 400px;
+    width: 100%;
+}
+
+
+section {
+    border: 1px solid #ccc;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.led-control-section {
+    width: 700px;
+    max-width: 800px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    background: #ffffff;
+    gap: 1.5rem;
+    padding: 2rem 0;
+    box-sizing: border-box;
 }
+.led-control-section {
+    position: relative;
+    left: 50%;
+    right: 50%;
+    transform: translateX(-50%);
+}
+
 
 .board-container {
     position: relative;
     width: 600px;
     height: 600px;
+    margin: 0 auto;
 }
 
-.splat {
+svg#splat {
     width: 100%;
     height: 100%;
 }
@@ -23,6 +60,7 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 4px;
+    pointer-events: auto;
 }
 
 .led-control input[type="color"] {
@@ -32,38 +70,29 @@ body {
     border: none;
 }
 
-.off-btn {
-    /*background: #ff4c4c;*/
-    /*color: white;*/
-    /*border: none;*/
-    /*padding: 2px 5px;*/
-    /*cursor: pointer;*/
-    /*font-size: 12px;*/
+.led-actions {
+    gap: 4px;
 }
 
-#all-off-btn {
-    /*margin-top: 20px;*/
-    /*padding: 10px 20px;*/
-    /*font-size: 16px;*/
-    /*cursor: pointer;*/
+.volume-controls input[type="range"] {
+    vertical-align: middle;
 }
 
- .midi-controls {
-     display: flex;
-     flex-direction: column;
-     gap: 10px;
-     max-width: 300px;
- }
+.midi-controls-form {
+    display: flex;
+    flex-direction: column;
+    max-width: 300px;
+}
 
 .form-row {
     display: grid;
-    grid-template-columns: 100px 1fr;
+    grid-template-columns: 80px 1fr;
     align-items: center;
-    gap: 10px;
+    gap: 4px;
 }
 
 .form-row label {
-    text-align: right;
+    text-align: left;
 }
 
 .tooltip {
@@ -80,14 +109,12 @@ body {
     border-radius: 4px;
     background: #eee;
     position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1;
 }
 
 .tooltip:hover .tooltiptext {
     visibility: visible;
     opacity: 1;
 }
-
-/*.tooltip .tooltiptext a {*/
-/*    color: #9cf;*/
-/*    text-decoration: underline;*/
-/*}*/

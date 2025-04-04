@@ -275,7 +275,7 @@ class OpenSplat:
         # Only change the state of LEDs with 1 indication   Command NA 
         #Only turn off the LEDs with 0 Indication    None
         packet = [ 0x01, 0x50, lowByte, highByte, red, green, blue ];
-        self._send_characteristic.write(bytearray(packet))   
+        self._send_characteristic.write(bytearray(packet))
     
     def playLEDSequence(self, seqIndex, red, green, blue, duration, loops):
                 # 0x6001    Sequence
@@ -299,6 +299,8 @@ class OpenSplat:
         # Send Response to App when completed   Command None
         packet = [ 0x01, 0x70, lowByte, highByte, red, green, blue, duration, flashes ];
         self._send_characteristic.write(bytearray(packet))
+
+
     
     
 
