@@ -13,20 +13,22 @@ def callback(data):
     display = ''
 
     # TODO actually match this up to resultant data structure
-    if response_type == 1: # battery case
-        display = f'Battery is {data[1]}'
-    elif response_type == 2: # id case
+    if response_type == 6: # battery case
+        display = f'Battery is {data[2]}/100? or 255? not 100% sure'
+    elif response_type == 0: # id case
         display = f'Splat id is {data[1]}'
-    elif response_type == 3: # switch status case
-        display = f'Switch status is {data[1]}'
-    elif response_type == 4: # pressed switch cae
+    elif response_type == 5: # switch status case
+        display = f'Switch status is {bin(data[2])}'
+    elif response_type == 3: # pressed switch cae
         display = ''
         for i in range(4):
-            color = "blue" if data[1] > i | 0b1 == 0b1 else "grey"
+            color = "blue" if (data[2] >> i & 0b1) == 0b1 else "grey"
             document.getElementById(f"switch-{i + 1}").setAttribute("fill", color)
+    else:
+        print(f'uncaught response id {response_type}')
 
     if display != '':
-        document.getElementById("").innerHTML = display
+        document.getElementById("ble_answer").innerHTML = display
         print(display)
 
 

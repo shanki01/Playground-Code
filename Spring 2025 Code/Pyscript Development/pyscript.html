@@ -11,160 +11,171 @@
     <link href="style.css" rel="stylesheet">
 </head>
 <body>
-    <main class="dashboard">
-        <h1>Splat Dashboard</h1>
+<main class="dashboard">
+    <h1>Splat Dashboard</h1>
 
-        <section class="connection-controls">
-            <button id="ble_connect">Connect</button>
-            <button id="ble_disconnect">Disconnect</button>
+    <section class="connection-controls">
+        <button id="ble_connect">Connect</button>
+        <button id="ble_disconnect">Disconnect</button>
 
-            <span class="tooltip">ⓘ
+        <span class="tooltip">ⓘ
                 <span class="tooltiptext">
                     Bluetooth only works in Chrome, Edge, or Opera.
                     <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API" target="_blank">More info</a>
                 </span>
             </span>
-        </section>
+    </section>
 
-        <section class="status-controls">
-            <button id="battery">Battery</button>
-            <button id="switches">Switch Status</button>
-            <button id="id">ID</button> <br>
-            Splat Response:
-            <div id='ble_answer' style='color:darkblue;'>None</div>
-        </section>
+    <section class="status-controls">
+        <button id="battery">Battery</button>
+        <button id="switches">Switch Status</button>
+        <!--             <button id="id">ID</button>  -->
+        <br>
+        Splat Response:
+        <div id='ble_answer' style='color:darkblue;'>None</div>
+    </section>
 
-        <section class="led-control-section">
-            <h2> LED Control</h2>
-            <div class="board-container">
-                <svg id="splat" viewBox="0 0 600 600">
-                    <g transform="scale(3.8)">
-                        <path d="M 32.849068,78.04741 C 32.478591,72.243253 19.882331,67.797512 18.894389,67.180049 17.906447,66.562586 9.7559264,63.969238 15.560085,55.201253 c 5.804159,-8.767982 12.843245,-0.987941 16.548028,0.37048 3.704781,1.358419 14.942622,2.222868 16.918503,-4.816218 1.975885,-7.039086 -9.014968,-21.117258 -10.249897,-24.82204 -1.234927,-3.704782 -2.593345,-9.189278 -2.222868,-12.189442 0.370478,-3.000165 4.534067,-8.9999441 12.336891,-10.0113642 7.802823,-1.0114202 12.456684,3.2753853 16.445886,13.9491902 3.9892,10.673806 9.249929,22.21014 11.644151,25.336811 2.39422,3.126671 7.92109,5.241713 21.294456,-3.0662 C 111.6486,31.644557 124.3121,18.760021 127.6544,16.711514 c 3.3423,-2.048509 7.87058,-4.85173 12.83013,-1.185979 4.95955,3.665751 8.73311,6.037708 4.95955,12.398865 -3.77357,6.361157 -25.12118,17.034962 -28.14004,21.239794 -3.01885,4.204833 -4.42046,7.439319 -2.80322,13.908291 1.61724,6.468976 5.82208,9.380011 11.3207,9.811277 5.49863,0.431265 23.07267,-3.342301 26.19934,-1.72506 3.12667,1.617245 6.11715,3.8808 5.53007,10.392053 -0.58708,6.51125 -22.84275,10.407327 -24.55062,10.56744 -1.70787,0.160112 -13.78344,1.928505 -15.63705,7.391799 -1.85362,5.463296 -2.1463,14.536266 7.90226,22.926316 10.04856,8.39006 19.21909,10.4388 7.41447,26.14577 -11.80462,15.70697 -23.31656,-7.60959 -25.07262,-10.53635 -1.75605,-2.92677 -13.950906,-25.46286 -23.121436,-24.09703 -9.170527,1.36582 -9.755881,9.36564 -10.146115,24.3897 -0.390236,15.02406 -11.804618,15.80453 -15.70697,15.90209 -3.902353,0.0976 -8.19494,-1.6585 -7.414469,-7.60959 0.78047,-5.95109 2.829205,-30.24323 1.756058,-34.8285 -1.073148,-4.58526 -3.902353,-11.70705 -11.219265,-9.65832 -7.316912,2.04874 -21.853174,13.36556 -29.560321,13.46312 C 4.4877055,115.70476 1.0175558,110.09171 1.2132396,104.37774 1.4089234,98.663772 25.539959,88.228214 27.068993,86.940956 c 1.529033,-1.287259 6.150553,-3.089387 5.780075,-8.893546 z" id="path3"
-                              sodipodi:nodetypes="ssssssszsszssssssssssssssscssssszs"
-                              style="fill:rgba(255,255,255,0);fill-opacity:1;fill-rule:evenodd;stroke:#272727;stroke-width:0.4;stroke-linecap:round;stroke-linejoin:round"
-                              xmlns="http://www.w3.org/2000/svg"
-                              xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"/>
-                    </g>
-                    <circle id="switch-1" cx="20" cy="20" r="20" fill="gray" />
-                    <circle id="switch-2" cx="580" cy="20" r="20" fill="gray" />
-                    <circle id="switch-3" cx="20" cy="580" r="20" fill="gray" />
-                    <circle id="switch-4" cx="580" cy="580" r="20" fill="gray" />
-                </svg>
+    <section class="led-control-section">
+        <h2> LED Control</h2>
+        <div class="board-container">
+            <svg id="splat" viewBox="0 0 600 600">
+                <g transform="scale(3.8)">
+                    <path d="M 32.849068,78.04741 C 32.478591,72.243253 19.882331,67.797512 18.894389,67.180049 17.906447,66.562586 9.7559264,63.969238 15.560085,55.201253 c 5.804159,-8.767982 12.843245,-0.987941 16.548028,0.37048 3.704781,1.358419 14.942622,2.222868 16.918503,-4.816218 1.975885,-7.039086 -9.014968,-21.117258 -10.249897,-24.82204 -1.234927,-3.704782 -2.593345,-9.189278 -2.222868,-12.189442 0.370478,-3.000165 4.534067,-8.9999441 12.336891,-10.0113642 7.802823,-1.0114202 12.456684,3.2753853 16.445886,13.9491902 3.9892,10.673806 9.249929,22.21014 11.644151,25.336811 2.39422,3.126671 7.92109,5.241713 21.294456,-3.0662 C 111.6486,31.644557 124.3121,18.760021 127.6544,16.711514 c 3.3423,-2.048509 7.87058,-4.85173 12.83013,-1.185979 4.95955,3.665751 8.73311,6.037708 4.95955,12.398865 -3.77357,6.361157 -25.12118,17.034962 -28.14004,21.239794 -3.01885,4.204833 -4.42046,7.439319 -2.80322,13.908291 1.61724,6.468976 5.82208,9.380011 11.3207,9.811277 5.49863,0.431265 23.07267,-3.342301 26.19934,-1.72506 3.12667,1.617245 6.11715,3.8808 5.53007,10.392053 -0.58708,6.51125 -22.84275,10.407327 -24.55062,10.56744 -1.70787,0.160112 -13.78344,1.928505 -15.63705,7.391799 -1.85362,5.463296 -2.1463,14.536266 7.90226,22.926316 10.04856,8.39006 19.21909,10.4388 7.41447,26.14577 -11.80462,15.70697 -23.31656,-7.60959 -25.07262,-10.53635 -1.75605,-2.92677 -13.950906,-25.46286 -23.121436,-24.09703 -9.170527,1.36582 -9.755881,9.36564 -10.146115,24.3897 -0.390236,15.02406 -11.804618,15.80453 -15.70697,15.90209 -3.902353,0.0976 -8.19494,-1.6585 -7.414469,-7.60959 0.78047,-5.95109 2.829205,-30.24323 1.756058,-34.8285 -1.073148,-4.58526 -3.902353,-11.70705 -11.219265,-9.65832 -7.316912,2.04874 -21.853174,13.36556 -29.560321,13.46312 C 4.4877055,115.70476 1.0175558,110.09171 1.2132396,104.37774 1.4089234,98.663772 25.539959,88.228214 27.068993,86.940956 c 1.529033,-1.287259 6.150553,-3.089387 5.780075,-8.893546 z" id="path3"
+                          sodipodi:nodetypes="ssssssszsszssssssssssssssscssssszs"
+                          style="fill:rgba(255,255,255,0);fill-opacity:1;fill-rule:evenodd;stroke:#272727;stroke-width:0.4;stroke-linecap:round;stroke-linejoin:round"
+                          xmlns="http://www.w3.org/2000/svg"
+                          xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"/>
+                </g>
+                <circle id="switch-2" cx="20" cy="20" r="20" fill="gray" />
+                <circle id="switch-1" cx="580" cy="20" r="20" fill="gray" />
+                <circle id="switch-4" cx="20" cy="580" r="20" fill="gray" />
+                <circle id="switch-3" cx="580" cy="580" r="20" fill="gray" />
+            </svg>
+        </div>
+        <div class="led-actions">
+            <button id="update-led-btn">Update</button>
+            <button id="all-off-btn">Turn All Off</button>
+            <br> <br>
+        </div>
+    </section>
+
+    <section class="sound-control">
+        <h2>Sound Control</h2>
+        <div class="volume-controls">
+            <input type="range" id="volumeSlider" min="0" max="255" value="255">
+            <button id="mute" onclick="soundOff()">Mute</button>
+        </div>
+
+        <div class="sond-player">
+            <label for="sound-index"> Sound #:</label>
+            <input type="number" id="sound-index" min="0" max="255">
+            <button id="play-sound">Play</button><br>
+            <p>
+                0: Splat <br>
+                1: Chime <br>
+                2: Buzz 1 <br>
+                3: Buzz 2 <br>
+                4: Doorbell <br>
+                5: Cymbol <br>
+                6: Fart <br>
+                7: Pop <br>
+                8: Zoom <br>
+                ... <br>
+                79: Backing up <br>
+            </p>
+        </div>
+    </section>
+
+    <section class="midi-controls">
+        <h2>MIDI Control</h2>
+        <div class="midi-controls-form">
+            <div class="form-row">
+                <label for="note">Note:</label>
+                <input type="text" id="note">
             </div>
-            <div class="led-actions">
-                <button id="update-led-btn">Update</button>
-                <button id="all-off-btn">Turn All Off</button>
-                <br> <br>
+            <div class="form-row">
+                <label for="octave">Octave:</label>
+                <input type="number" id="octave" value="4">
             </div>
-        </section>
-
-        <section class="sound-control">
-            <h2>Sound Control</h2>
-            <div class="volume-controls">
-                <input type="range" id="volumeSlider" min="0" max="255" value="255">
-                <button id="mute" onclick="soundOff()">Mute</button>
+            <div class="form-row">
+                <label for="velocity">Velocity:</label>
+                <input type="number" id="velocity" value="100">
             </div>
-
-            <div class="sond-player">
-                <label for="sound-index"> Sound #:</label>
-                <input type="number" id="sound-index" min="0" max="255">
-                <button id="play-sound">Play</button><br>
-                <p>
-                    1: ? <br>
-                    2: ? <br>
-                    3: ? <br>
-                    4: Doorbell <br>
-                </p>
+            <div class="form-row">
+                <label for="instrument">Instrument:</label>
+                <input type="number" id="instrument" value="0">
             </div>
-        </section>
+        </div>
+        <div>
+            <button id="note-on">Note On</button>
+            <button id="note-off">Note Off</button>
+            <button id="all-midi-off">All MIDI Off</button>
+        </div>
+    </section>
 
-        <section class="midi-controls">
-            <h2>MIDI Control</h2>
-            <div class="midi-controls-form">
-                <div class="form-row">
-                    <label for="note">Note:</label>
-                    <input type="text" id="note">
-                </div>
-                <div class="form-row">
-                    <label for="octave">Octave:</label>
-                    <input type="number" id="octave" value="4">
-                </div>
-                <div class="form-row">
-                    <label for="velocity">Velocity:</label>
-                    <input type="number" id="velocity" value="100">
-                </div>
-                <div class="form-row">
-                    <label for="instrument">Instrument:</label>
-                    <input type="number" id="instrument" value="0">
-                </div>
-            </div>
-            <div>
-                <button id="note-on">Note On</button>
-                <button id="note-off">Note Off</button>
-                <button id="all-midi-off">All MIDI Off</button>
-            </div>
-        </section>
+    <section class="debug">
+        <h2>Debugging</h2>
+        <button id="test-click">Test</button>
+    </section>
+    <section class="led-control-section">
+        <script config="./config.toml" src="./main.py" terminal type="py"></script>
+    </section>
 
-        <section class="debug">
-            <h2>Debugging</h2>
-            <button id="test-click">Test</button>
-            <script config="./config.toml" src="./main.py" terminal type="py"></script>
-        </section>
-    </main>
+</main>
 
-    <script>
-        function soundOff() {
-            document.getElementById('volumeSlider').value = 0;
+<script>
+    function soundOff() {
+        document.getElementById('volumeSlider').value = 0;
+    }
+
+    const positions = [
+        [201, 352],
+        [38, 381],
+        [148, 295],
+        [78, 205],
+        [191, 208],
+        [185, 29],
+        [304, 187],
+        [511, 70],
+        [390, 238],
+        [557, 288],
+        [415, 341],
+        [463, 518],
+        [300, 390],
+        [227, 526],
+    ];
+
+    positions.forEach((pos, index) => {
+        const div = document.createElement('div');
+        div.className = 'led-control';
+        div.style.left = `${pos[0]}px`;
+        div.style.top = `${pos[1]}px`;
+
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = '#000000';
+        colorInput.id = `led-${index}`;
+
+        const offButton = document.createElement('button');
+        offButton.className = 'off-btn';
+        offButton.textContent = 'Off';
+        offButton.id = `led-off-${index}`;
+        offButton.onclick = () => {
+            colorInput.value = '#000000';
+            // Hook in hardware logic here if needed
+        };
+
+        div.appendChild(colorInput);
+        div.appendChild(offButton);
+        document.querySelector('.board-container').appendChild(div);
+    });
+
+    document.getElementById('all-off-btn').addEventListener('click', () => {
+        for (let i = 0; i < 14; i++) {
+            const led = document.getElementById(`led-${i}`);
+            if (led) led.value = '#000000';
         }
-
-        const positions = [
-            [148, 295],
-            [78, 205],
-            [191, 208],
-            [185, 29],
-            [304, 187],
-            [511, 70],
-            [390, 238],
-            [557, 288],
-            [415, 341],
-            [463, 518],
-            [300, 390],
-            [227, 526],
-            [201, 352],
-            [38, 381]
-        ];
-
-        positions.forEach((pos, index) => {
-            const div = document.createElement('div');
-            div.className = 'led-control';
-            div.style.left = `${pos[0]}px`;
-            div.style.top = `${pos[1]}px`;
-
-            const colorInput = document.createElement('input');
-            colorInput.type = 'color';
-            colorInput.value = '#ffffff';
-            colorInput.id = `led-${index}`;
-
-            const offButton = document.createElement('button');
-            offButton.className = 'off-btn';
-            offButton.textContent = 'Off';
-            offButton.id = `led-off-${index}`;
-            offButton.onclick = () => {
-                colorInput.value = '#000000';
-                // Hook in hardware logic here if needed
-            };
-
-            div.appendChild(colorInput);
-            div.appendChild(offButton);
-            document.querySelector('.board-container').appendChild(div);
-        });
-
-        document.getElementById('all-off-btn').addEventListener('click', () => {
-            for (let i = 0; i < 14; i++) {
-                const led = document.getElementById(`led-${i}`);
-                if (led) led.value = '#000000';
-            }
-        });
-    </script>
+    });
+</script>
 </body>
 </html>
